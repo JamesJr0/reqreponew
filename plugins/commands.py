@@ -2,10 +2,11 @@ import os
 import logging
 import random
 import asyncio
+import urllib.parse
 from Script import script
 from pyrogram import Client, filters, enums
 from pyrogram.errors import ChatAdminRequired, FloodWait
-from pyrogram.types import *
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from database.ia_filterdb import Media1, Media2, Media3, Media4, Media5, db as clientDB, db1 as clientDB1, db2 as clientDB2, db3 as clientDB3, db4 as clientDB4, db5 as clientDB5, get_file_details, unpack_new_file_id
 from database.users_chats_db import db
 from plugins.fsub import ForceSub
@@ -15,6 +16,7 @@ from database.connections_mdb import active_connection
 import re
 import json
 import base64
+from plugins.pm_filter import auto_filter
 logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
@@ -55,6 +57,13 @@ async def start(client, message):
         )
         return
 
+    if len(message.command) == 2 and message.command[1].startswith('search'):
+        movies = message.command[1].split("_", 1)[1] 
+        movie = movies.replace('_',' ')
+        message.text = movie 
+        await auto_filter(client, message) 
+        return
+        
     if len(message.command) == 2 and message.command[1] in ["subscribe", "error", "okay", "help", "start", "hehe"]:
         if message.command[1] == "subscribe":
             await ForceSub(client, message)
