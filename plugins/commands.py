@@ -7,7 +7,7 @@ from Script import script
 from pyrogram import Client, filters, enums
 from pyrogram.errors import ChatAdminRequired, FloodWait
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
-from database.ia_filterdb import Media1, Media2, Media3, Media4, Media5, db as clientDB, db1 as clientDB1, db2 as clientDB2, db3 as clientDB3, db4 as clientDB4, db5 as clientDB5, get_file_details, unpack_new_file_id, latest_movies 
+from database.ia_filterdb import Media1, Media2, Media3, Media4, Media5, db as clientDB, db1 as clientDB1, db2 as clientDB2, db3 as clientDB3, db4 as clientDB4, db5 as clientDB5, get_file_details, unpack_new_file_id, get_latest_movies 
 from database.users_chats_db import db
 from plugins.fsub import ForceSub
 from info import *
@@ -464,8 +464,6 @@ async def settings(client, message):
 
 
 
-import re
-from pyrogram import Client, filters
 
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
