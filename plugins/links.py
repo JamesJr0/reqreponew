@@ -14,7 +14,7 @@ links_btn = [
     [
         InlineKeyboardButton("ᴍᴏᴠɪᴇ ꜱᴇᴀʀᴄʜ ʙᴏᴛ", url = f"{MOVIE_BOT}"),
         InlineKeyboardButton("ʟᴀᴛᴇꜱᴛ ᴜᴘʟᴏᴀᴅꜱ ᴄʜᴀɴɴᴇʟ", url = f"{LATEST_UPLOADS}")
-    ]  
+    ],
     [
         InlineKeyboardButton("𝖳𝖤𝖠𝖬 ProSearchFather", url = "https://t.me/ProSearchFather")
     ]
