@@ -430,3 +430,38 @@ def get_readable_time(seconds) -> str:
     seconds = int(seconds)
     result += f"{seconds}s"
     return result
+import re
+
+async def get_latest_movies():
+    languages = ["Malayalam", "Tamil", "Telugu", "Kannada", "Hindi", "English"]
+    latest_movies = {lang: [] for lang in languages}
+
+    # Fetch latest 20 movies from both DBs
+    movies1 = await Media1.collection.find().sort("$natural", -1).limit(20).to_list(None)
+    movies2 = await Media2.collection.find().sort("$natural", -1).limit(20).to_list(None)
+    
+    all_movies = movies1 + movies2
+
+    for movie in all_movies:
+        file_name = movie.get("file_name", "")
+
+        # Extract Movie Name and Year
+        match = re.search(r"(.+?)(\d{4})", file_name)
+        if match:
+            movie_name = f"{match.group(1).strip()} {match.group(2)}"
+        else:
+            movie_name = file_name
+        
+        # Detect Series and Extract only SXX
+        if re.search(r"S\d{2}", file_name, re.IGNORECASE):
+            movie_name = re.sub(r"(S\d{2}).*", r"\1", file_name)
+
+        # Check which languages this movie belongs to
+        for lang in languages:
+            if re.search(lang, movie.get("caption", ""), re.IGNORECASE):
+                if movie_name not in latest_movies[lang]:
+                    latest_movies[lang].append(movie_name)
+
+    # Limit to 5 movies per language
+    return [{"language": lang, "movies": latest_movies[lang][:5]} for lang in languages]
+
