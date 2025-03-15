@@ -431,16 +431,11 @@ def get_readable_time(seconds) -> str:
     result += f"{seconds}s"
     return result
 
-import re
-
 async def get_latest_movies():
     languages = ["Malayalam", "Tamil", "Telugu", "Kannada", "Hindi", "English", "Chinese", "Japanese", "Korean"]
-    
-    # Separate dictionaries for movies and series
     latest_movies = {lang: [] for lang in languages}
-    latest_series = {lang: [] for lang in languages}
 
-    # Fetch latest 20 movies from all DBs
+    # Fetch latest 20 movies from databases
     movies1 = await Media1.collection.find().sort("$natural", -1).limit(20).to_list(None)
     movies2 = await Media2.collection.find().sort("$natural", -1).limit(20).to_list(None)
     movies3 = await Media3.collection.find().sort("$natural", -1).limit(20).to_list(None)
@@ -450,32 +445,22 @@ async def get_latest_movies():
 
     for movie in all_movies:
         file_name = movie.get("file_name", "")
+        caption = str(movie.get("caption", ""))  # Ensure caption is a string
 
-        # Extract Movie Name and Year
+        # Extract movie name & check if it's a series
         match = re.search(r"(.+?)(\d{4})", file_name)
         movie_name = f"{match.group(1).strip()} {match.group(2)}" if match else file_name
+        if re.search(r"S\d{2}", file_name, re.IGNORECASE):
+            movie_name = re.sub(r"(S\d{2}).*", r"\1", file_name)
 
-        # Ensure 'caption' is a valid string before regex search
-        caption = str(movie.get("caption", ""))
+        # Categorize movies by language
+        for lang in languages:
+            if re.search(lang, caption, re.IGNORECASE):
+                if movie_name not in latest_movies[lang]:
+                    latest_movies[lang].append(movie_name)
 
-        # Detect if it's a Series (SXX or Season XX pattern)
-        if re.search(r"(S\d{2}|Season\s?\d{1,2})", file_name, re.IGNORECASE):
-            series_name = re.sub(r"(S\d{2}|Season\s?\d{1,2}).*", r"\1", file_name).strip()
-            
-            # Add to the latest_series section
-            for lang in languages:
-                if re.search(lang, caption, re.IGNORECASE):
-                    if series_name not in latest_series[lang]:
-                        latest_series[lang].append(series_name)
-        else:
-            # Add to the latest_movies section
-            for lang in languages:
-                if re.search(lang, caption, re.IGNORECASE):
-                    if movie_name not in latest_movies[lang]:
-                        latest_movies[lang].append(movie_name)
+    # Ensure result is a list of dictionaries
+    result = [{"language": lang, "movies": latest_movies[lang][:5]} for lang in languages]
+    print(f"Returning from get_latest_movies: {repr(result)}")  # Debugging line
+    return result
 
-    # Limit to 5 movies/series per language
-    return {
-        "movies": [{"language": lang, "movies": latest_movies[lang][:5]} for lang in languages],
-        "series": [{"language": lang, "series": latest_series[lang][:5]} for lang in languages],
-    }
