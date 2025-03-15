@@ -230,9 +230,8 @@ async def start(client, message):
         chat_id=message.from_user.id,
         file_id=file_id,
         caption=f_caption,
-        reply_markup=InlineKeyboardMarkup( [ [ InlineKeyboardButton("⚡ ᴜᴘᴅᴀᴛᴇꜱ ⚡", url=f"{UPDATES_CHANNEL}"),
-                                               InlineKeyboardButton("⚡ ɢʀᴏᴜᴘ ⚡", url="https://t.me/+R7lZTfsZ4k1mYjU9") ],
-                                             [ InlineKeyboardButton('🔎 Sᴇᴀʀᴄʜ Iɴʟɪɴᴇ 🔍', switch_inline_query_current_chat = '') ] ] ),
+        reply_markup=InlineKeyboardMarkup( [ [ InlineKeyboardButton('🔗 Gᴇɴᴇʀᴀᴛᴇ Dɪʀᴇᴄᴛ Lɪɴᴋ 🔗', callback_data = "generate") ],
+                                             [ InlineKeyboardButton('⚙️ Bᴏᴛ Uᴘᴅᴀᴛᴇ Cʜᴀɴɴᴇʟ ⚙️', url=f"{UPDATES_CHANNEL}") ] ] ),
         protect_content=True if pre == 'filep' else False,
         )
                     
