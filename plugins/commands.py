@@ -507,8 +507,9 @@ async def save_template(client, message):
     await save_group_settings(grp_id, 'template', template)
     await sts.edit(f"Successfully changed template for {title} to\n\n{template}")
 
-@Client.on_message(filters.command("latest")) async def latest_movies(client, message): latest_movies = await get_latest_movies()
-
+@Client.on_message(filters.command("latest"))
+async def latest_movies(client, message):
+    latest_movies = await get_latest_movies()
 if not latest_movies:
     await message.reply("No latest movies found.")
     return
