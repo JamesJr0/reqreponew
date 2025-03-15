@@ -510,21 +510,21 @@ async def save_template(client, message):
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
     latest_movies = await get_latest_movies()
-if not latest_movies:
-    await message.reply("No latest movies found.")
-    return
 
-response = "🎬 Latest Movies Added to Database\n"
+    if not latest_movies:
+        await message.reply("No latest movies found.")
+        return
 
-for data in latest_movies:
-    if data["movies"]:
-        language = data["language"].title()
-        response += f"\n{language}:\n"
-        for movie in data["movies"]:
-            response += f"• {movie}\n"
+    response = "🎬 Latest Movies Added to Database\n"
 
-await message.reply(response)
+    for data in latest_movies:
+        if data["movies"]:
+            language = data["language"].title()
+            response += f"\n{language}:\n"
+            for movie in data["movies"]:
+                response += f"• {movie}\n"
 
+    await message.reply(response)
 
 
 
