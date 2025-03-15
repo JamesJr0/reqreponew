@@ -8,18 +8,18 @@ CHANNEL_ID = -1002224909238
 
 links_btn = [
     [
-        InlineKeyboardButton("ʙᴏᴛ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ", url = f"{UPDATES_CHANNEL}")
-    ],
-    [
+        InlineKeyboardButton("ʙᴏᴛ ᴜᴘᴅᴀᴛᴇꜱ ᴄʜᴀɴɴᴇʟ", url = f"{UPDATES_CHANNEL}"),
         InlineKeyboardButton("ᴍᴏᴠɪᴇ ꜱᴇᴀʀᴄʜ ɢʀᴏᴜᴘ", url = f"{MOVIE_GROUP}")
     ],
     [
-        InlineKeyboardButton("ᴍᴏᴠɪᴇ ꜱᴇᴀʀᴄʜ ʙᴏᴛ", url = f"{MOVIE_BOT}")
-    ],
-    [
+        InlineKeyboardButton("ᴍᴏᴠɪᴇ ꜱᴇᴀʀᴄʜ ʙᴏᴛ", url = f"{MOVIE_BOT}"),
         InlineKeyboardButton("ʟᴀᴛᴇꜱᴛ ᴜᴘʟᴏᴀᴅꜱ ᴄʜᴀɴɴᴇʟ", url = f"{LATEST_UPLOADS}")
     ]  
+    [
+        InlineKeyboardButton("𝖳𝖤𝖠𝖬 ProSearchFather", url = "https://t.me/ProSearchFather")
+    ]
 ]
+
 
 @Client.on_message(filters.command("links", CMD))
 async def linkslist(client: Client, message: Message):
