@@ -10,13 +10,13 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQ
 from database.ia_filterdb import Media1, Media2, Media3, Media4, Media5, db as clientDB, db1 as clientDB1, db2 as clientDB2, db3 as clientDB3, db4 as clientDB4, db5 as clientDB5, get_file_details, unpack_new_file_id, get_latest_movies  
 from database.users_chats_db import db
 from plugins.fsub import ForceSub
-from plugins.get_latest_movies import get_latest_movies
 from info import *
 from utils import get_settings, get_size, is_subscribed, save_group_settings, temp
 from database.connections_mdb import active_connection
 import re
 import json
 import base64
+from plugins.pm_filter import auto_filter
 logger = logging.getLogger(__name__)
 
 BATCH_FILES = {}
