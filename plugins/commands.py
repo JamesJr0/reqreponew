@@ -462,12 +462,10 @@ async def settings(client, message):
             reply_to_message_id=message.id
         )
 
-
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
     latest_movies = await get_latest_movies()
 
-    # ✅ Ensure latest_movies is a list before iterating
     if not isinstance(latest_movies, list):
         print(f"Unexpected data type: {type(latest_movies)}, Value: {repr(latest_movies)}")  # Debugging
         await message.reply("Error: Unexpected data format.")
@@ -484,14 +482,14 @@ async def latest_movies(client, message):
     has_series = False
 
     for data in latest_movies:
-        if not isinstance(data, dict):  # ✅ Ensure each item is a dictionary
+        if not isinstance(data, dict):
             print(f"Unexpected data format in latest_movies: {repr(data)}")  # Debugging
             continue
-        
+
+        language = data.get("language", "").title()
         movies = []
         series = []
-        language = data.get("language", "").title()
-        
+
         for movie in data.get("movies", []):
             if re.search(r"S\d{2}", movie, re.IGNORECASE):
                 series.append(movie)
@@ -500,10 +498,12 @@ async def latest_movies(client, message):
                 movies.append(movie)
                 has_movies = True
 
+        # Append Movies
         if movies:
             movie_response += f"\n**{language}:**\n"
             movie_response += "\n".join(f"• {m}" for m in movies) + "\n"
 
+        # Append Series
         if series:
             series_response += f"\n**{language}:**\n"
             series_response += "\n".join(f"• {s}" for s in series) + "\n"
@@ -515,6 +515,8 @@ async def latest_movies(client, message):
         response += "\n" + series_response
 
     await message.reply(response)
+
+
 
 
 
