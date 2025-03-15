@@ -464,49 +464,58 @@ async def settings(client, message):
 
 
 
-@Client.on_message(filters.command('set_template'))
-async def save_template(client, message):
-    sts = await message.reply("Checking template")
-    userid = message.from_user.id if message.from_user else None
-    if not userid:
-        return await message.reply(f"You are anonymous admin. Use /connect {message.chat.id} in PM")
-    chat_type = message.chat.type
+import re
+from pyrogram import Client, filters
 
-    if chat_type == enums.ChatType.PRIVATE:
-        grpid = await active_connection(str(userid))
-        if grpid is not None:
-            grp_id = grpid
-            try:
-                chat = await client.get_chat(grpid)
-                title = chat.title
-            except:
-                await message.reply_text("Make sure I'm present in your group!!", quote=True)
-                return
-        else:
-            await message.reply_text("I'm not connected to any groups!", quote=True)
-            return
+@Client.on_message(filters.command("latest"))
+async def latest_movies(client, message):
+    latest_movies = await get_latest_movies()
 
-    elif chat_type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
-        grp_id = message.chat.id
-        title = message.chat.title
-
-    else:
+    if not latest_movies:
+        await message.reply("No latest movies found.")
         return
 
-    st = await client.get_chat_member(grp_id, userid)
-    if (
-            st.status != enums.ChatMemberStatus.ADMINISTRATOR
-            and st.status != enums.ChatMemberStatus.OWNER
-            and str(userid) not in ADMINS
-    ):
-        return
+    movie_response = "🎬 **Latest Movies Added to Database**\n"
+    series_response = "📺 **Latest Series Added to Database**\n"
 
-    if len(message.command) < 2:
-        return await sts.edit("No Input!!")
-    template = message.text.split(" ", 1)[1]
-    await save_group_settings(grp_id, 'template', template)
-    await sts.edit(f"Successfully changed template for {title} to\n\n{template}")
+    has_movies = False
+    has_series = False
 
+    for data in latest_movies:
+        movies = []
+        series = []
+        language = data["language"].title()
+
+        # Separate Movies and Series
+        for movie in data["movies"]:
+            if re.search(r"S\d{2}", movie, re.IGNORECASE):
+                series.append(movie)  # Add to series section
+                has_series = True
+            else:
+                movies.append(movie)  # Add to movies section
+                has_movies = True
+
+        # Append Movies
+        if movies:
+            movie_response += f"\n**{language}:**\n"
+            for movie in movies:
+                movie_response += f"• {movie}\n"
+
+        # Append Series
+        if series:
+            series_response += f"\n**{language}:**\n"
+            for show in series:
+                series_response += f"• {show}\n"
+
+    # Final Response
+    response = ""
+
+    if has_movies:
+        response += movie_response
+    if has_series:
+        response += "\n" + series_response  # Separate movies & series with a newline
+
+    await message.reply(response)
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
     latest_movies = await get_latest_movies()
