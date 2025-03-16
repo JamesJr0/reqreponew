@@ -456,7 +456,7 @@ import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# Admin User IDs (Including your ID)
+# Admin User IDs
 ADMIN_IDS = [6646976956]
 
 # Store manually added titles
@@ -465,15 +465,22 @@ manual_titles = {
     "Series": []
 }
 
+# Filter function for movies from 2023 onwards
+def filter_recent_movies(movies):
+    return [m for m in movies if re.search(r"\b(2023|2024|2025)\b", m)]
+
+# Filter function for latest series episodes
+def filter_latest_series(series_list):
+    series_dict = {}
+    for series in series_list:
+        base_title = re.sub(r"S(\d{2})E(\d{2}).*", r"\1\2", series)  # Extract season/episode
+        series_dict[base_title] = series  # Keep the latest entry
+    return list(series_dict.values())
+
 # Latest Movies Command
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
     latest_movies = await get_latest_movies()
-
-    if not isinstance(latest_movies, list):
-        print(f"Unexpected data type: {type(latest_movies)}, Value: {repr(latest_movies)}")
-        await message.reply("⚠️ Error: Unexpected data format.")
-        return
 
     if not latest_movies and not manual_titles["Movies"] and not manual_titles["Series"]:
         await message.reply("📭 No latest movies or series found.")
@@ -493,26 +500,23 @@ async def latest_movies(client, message):
         combined_movies[language].update(movies)
 
     for data in latest_movies:
-        if not isinstance(data, dict):
-            print(f"Unexpected data format in latest_movies: {repr(data)}")
-            continue
-
         category = data.get("category", "")
         movies = data.get("movies", [])
 
         if category == "Series":
             if movies:
                 has_series = True
-                for series in movies:
+                filtered_series = filter_latest_series(movies)
+                for series in filtered_series:
                     series_response += f"• {series}\n"
 
         else:
             language = data.get("language", "").title()
             if language not in combined_movies:
                 combined_movies[language] = set()
-            combined_movies[language].update(movies)
+            combined_movies[language].update(filter_recent_movies(movies))
 
-    # Build the movie response
+    # Build movie response
     for language, movies in combined_movies.items():
         if movies:
             has_movies = True
@@ -537,102 +541,10 @@ async def latest_movies(client, message):
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
-        [InlineKeyboardButton("❌ Close", callback_data="close_message")]
+        [InlineKeyboardButton("🔒 Close", callback_data="close_message")]
     ])
 
     await message.reply(response.strip(), reply_markup=keyboard)
-
-# Manual Title Addition Command for Admins
-@Client.on_message(filters.command("addtitle"))
-async def add_title(client, message):
-    if message.from_user.id not in ADMIN_IDS:
-        await message.reply("❌ You are not authorized to use this command.")
-        return
-
-    try:
-        command_parts = message.text.split(None, 2)
-        if len(command_parts) < 3:
-            await message.reply("⚠️ Invalid format. Use /addtitle <category> <title>")
-            return
-
-        category, title = command_parts[1].strip().lower(), command_parts[2].strip()
-
-        # Remove year brackets (e.g., "Movie (2023)" → "Movie 2023")
-        clean_title = re.sub(r"\(\s*\d{4}\s*\)", "", title).strip()
-
-        if category == "movie":
-            language_match = re.search(r"#(\w+)", title)
-            if language_match:
-                language = language_match.group(1).title()
-                clean_title = clean_title.replace(f"#{language}", "").strip()
-            else:
-                language = "Unknown"
-
-            if language not in manual_titles["Movies"]:
-                manual_titles["Movies"][language] = []
-
-            if clean_title not in manual_titles["Movies"][language]:
-                manual_titles["Movies"][language].append(clean_title)
-                await message.reply(f"✅ Movie added successfully: {clean_title} ({language})")
-            else:
-                await message.reply("⚠️ This movie already exists in the database.")
-
-        elif category == "series":
-            if clean_title not in manual_titles["Series"]:
-                manual_titles["Series"].append(clean_title)
-                await message.reply(f"✅ Series added successfully: {clean_title}")
-            else:
-                await message.reply("⚠️ This series already exists in the database.")
-        else:
-            await message.reply("⚠️ Invalid category. Use /addtitle movie or /addtitle series")
-
-    except Exception as e:
-        await message.reply(f"❌ Error: {str(e)}")
-
-# Remove Title Command for Admins (Now removes both manual & fetched)
-@Client.on_message(filters.command("removetitle"))
-async def remove_title(client, message):
-    if message.from_user.id not in ADMIN_IDS:
-        await message.reply("❌ You are not authorized to use this command.")
-        return
-
-    try:
-        command_parts = message.text.split(None, 2)
-        if len(command_parts) < 3:
-            await message.reply("⚠️ Invalid format. Use /removetitle <category> <title>")
-            return
-
-        category, title = command_parts[1].strip().lower(), command_parts[2].strip()
-
-        # Remove year brackets before comparison
-        clean_title = re.sub(r"\(\s*\d{4}\s*\)", "", title).strip()
-
-        if category == "movie":
-            for language, movies in manual_titles["Movies"].items():
-                if clean_title in movies:
-                    manual_titles["Movies"][language].remove(clean_title)
-                    await message.reply(f"✅ Movie removed successfully: {clean_title}")
-                    return
-
-            for data in await get_latest_movies():
-                if clean_title in data.get("movies", []):
-                    data["movies"].remove(clean_title)
-                    await message.reply(f"✅ Automated movie removed successfully: {clean_title}")
-                    return
-
-            await message.reply("⚠️ Movie not found in the database.")
-
-        elif category == "series":
-            if clean_title in manual_titles["Series"]:
-                manual_titles["Series"].remove(clean_title)
-                await message.reply(f"✅ Series removed successfully: {clean_title}")
-            else:
-                await message.reply("⚠️ Series not found in the database.")
-        else:
-            await message.reply("⚠️ Invalid category. Use /removetitle movie or /removetitle series")
-
-    except Exception as e:
-        await message.reply(f"❌ Error: {str(e)}")
 
 # Close Button Callback
 @Client.on_callback_query(filters.regex("^close_message$"))
