@@ -452,7 +452,10 @@ async def settings(client, message):
             ],
         ]
 
-  @Client.on_message(filters.command("removetitle"))
+
+from pyrogram import Client, filters
+
+@Client.on_message(filters.command("removetitle"))
 async def remove_title(client, message):
     if message.from_user.id not in [6646976956]:  # Admin Check
         await message.reply("❌ You are not authorized to use this command.")
@@ -474,7 +477,7 @@ async def remove_title(client, message):
             for lang, movies in manual_titles["Movies"].items():
                 if title in movies:
                     manual_titles["Movies"][lang].remove(title)
-                    await message.reply(f"✅ **Manually added movie removed:** `{title}`")
+                    await message.reply(f"✅ **Manually added movie removed:** {title}")
                     found = True
                     break
 
@@ -484,7 +487,7 @@ async def remove_title(client, message):
                 if data.get("language", "").title() in manual_titles["Movies"]:
                     if title in data["movies"]:
                         data["movies"].remove(title)
-                        await message.reply(f"✅ **Fetched movie removed:** `{title}`")
+                        await message.reply(f"✅ **Fetched movie removed:** {title}")
                         found = True
                         break
 
@@ -495,13 +498,13 @@ async def remove_title(client, message):
         elif category == "series":
             if title in manual_titles["Series"]:
                 manual_titles["Series"].remove(title)
-                await message.reply(f"✅ **Manually added series removed:** `{title}`")
+                await message.reply(f"✅ **Manually added series removed:** {title}")
             else:
                 latest_movies = await get_latest_movies()
                 for data in latest_movies:
                     if data.get("category") == "Series" and title in data["movies"]:
                         data["movies"].remove(title)
-                        await message.reply(f"✅ **Fetched series removed:** `{title}`")
+                        await message.reply(f"✅ **Fetched series removed:** {title}")
                         return
                 await message.reply("❌ Title not found in manual or database records.")
 
