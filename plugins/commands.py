@@ -453,13 +453,6 @@ async def settings(client, message):
         ]
 
 
-from pyrogram import Client, filters
-
-manual_titles = {
-    "Movies": {},
-    "Series": []
-}
-
 @Client.on_message(filters.command("addtitle"))
 async def add_title(client, message):
     if message.from_user.id != 6646976956:
