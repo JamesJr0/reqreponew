@@ -515,6 +515,66 @@ async def latest_movies(client, message):
         response += "\n" + series_response
 
     await message.reply(response)
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+@Client.on_message(filters.command("latest"))
+async def latest_movies(client, message):
+    latest_movies = await get_latest_movies()
+
+    if not isinstance(latest_movies, list):
+        print(f"Unexpected data type: {type(latest_movies)}, Value: {repr(latest_movies)}")  # Debugging
+        await message.reply("Error: Unexpected data format.")
+        return
+
+    if not latest_movies:
+        await message.reply("No latest movies found.")
+        return
+
+    movie_response = "🎬 **Latest Movies Added to Database**\n"
+    series_response = "📺 **Latest Series Added to Database**\n"
+
+    has_movies = False
+    has_series = False
+
+    for data in latest_movies:
+        if not isinstance(data, dict):
+            print(f"Unexpected data format in latest_movies: {repr(data)}")  # Debugging
+            continue
+
+        language = data.get("language", "").title()
+        movies = []
+        series = []
+
+        for movie in data.get("movies", []):
+            if re.search(r"S\d{2}", movie, re.IGNORECASE):
+                series.append(movie)
+                has_series = True
+            else:
+                movies.append(movie)
+                has_movies = True
+
+        # Append Movies
+        if movies:
+            movie_response += f"\n**{language}:**\n"
+            movie_response += "\n".join(f"• {m}" for m in movies) + "\n"
+
+        # Append Series
+        if series:
+            series_response += f"\n**{language}:**\n"
+            series_response += "\n".join(f"• {s}" for s in series) + "\n"
+
+    response = ""
+    if has_movies:
+        response += movie_response
+    if has_series:
+        response += "\n" + series_response
+
+    # ✅ Inline "Close" Button
+    keyboard = InlineKeyboardMarkup(
+        [[InlineKeyboardButton("❌ Close", callback_data="close_message")]]
+    )
+
+    await message.reply(response, reply_markup=keyboard)
 
 
 
