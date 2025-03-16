@@ -451,78 +451,98 @@ async def settings(client, message):
                 ),
             ],
         ]
-
 import re
-import time
+from datetime import datetime, timedelta
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# Admin User ID
+# Admin User IDs
 ADMIN_IDS = [6646976956]
 
-# Data Storage with Timestamps for 24-Hour Expiry
+# Store manually added titles
 manual_titles = {
     "Movies": {},
     "Series": []
 }
-expiry_timestamps = {
-    "Movies": {},
-    "Series": []
-}
+
+# Store timestamps for 24-hour expiry
+title_timestamps = {}
 
 # Latest Movies Command
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
     latest_movies = await get_latest_movies()
 
-    # Cleanup expired entries
-    current_time = time.time()
-    for category in ["Movies", "Series"]:
-        for lang, movies in manual_titles[category].items():
-            manual_titles[category][lang] = [
-                m for i, m in enumerate(movies) if current_time - expiry_timestamps[category][lang][i] < 86400
+    # Clean expired titles (older than 24 hours)
+    now = datetime.now()
+    for category in manual_titles:
+        if isinstance(manual_titles[category], dict):
+            for lang in list(manual_titles[category]):
+                manual_titles[category][lang] = [
+                    title for title in manual_titles[category][lang]
+                    if now - title_timestamps.get(title, now) < timedelta(hours=24)
+                ]
+        elif isinstance(manual_titles[category], list):
+            manual_titles[category] = [
+                title for title in manual_titles[category]
+                if now - title_timestamps.get(title, now) < timedelta(hours=24)
             ]
 
-    movie_response = "**🎬 Latest Movies Added to Database**\n"
-    series_response = "**📺 Latest Series Added to Database**\n\n"
-    has_movies, has_series = False, False
+    # Build responses
+    movie_response = "🎬 **Latest Movies Added to Database**\n"
+    series_response = "📺 **Latest Series Added to Database**\n\n"
+    has_movies = False
+    has_series = False
 
+    # Combine manually added movies with fetched ones
     combined_movies = {}
 
-    # Combine manual and fetched movies
     for language, movies in manual_titles["Movies"].items():
-        combined_movies.setdefault(language, set()).update(movies)
+        if language not in combined_movies:
+            combined_movies[language] = set()
+        combined_movies[language].update(movies)
 
     for data in latest_movies:
+        if not isinstance(data, dict):
+            continue
+
         category = data.get("category", "")
         movies = data.get("movies", [])
 
         if category == "Series":
-            has_series = True
-            series_latest = {}
-            for series in movies:
-                series_name, season_episode = re.match(r"(.+?)\s(S\d{2}E\d{2})", series).groups()
-                series_latest[series_name] = max(series_latest.get(series_name, ""), season_episode)
-
-            for series_name, latest_episode in series_latest.items():
-                series_response += f"• {series_name} {latest_episode}\n"
+            if movies:
+                has_series = True
+                latest_series = {}
+                for series in movies:
+                    series_name, season_episode = re.match(r"(.+?) (S\d{2}E\d{2})", series).groups()
+                    latest_series[series_name] = season_episode
+                for series, latest_ep in latest_series.items():
+                    series_response += f"• {series} {latest_ep}\n"
 
         else:
             language = data.get("language", "").title()
-            combined_movies.setdefault(language, set()).update(movies)
+            if language not in combined_movies:
+                combined_movies[language] = set()
+            combined_movies[language].update(movies)
 
-    # Build movie response
+    # Build the movie response
     for language, movies in combined_movies.items():
-        if movies:
+        filtered_movies = []
+        for movie in movies:
+            match = re.match(r"(.+?)\s?(\d{4})", movie)
+            if match:
+                title, year = match.groups()
+                if int(year) >= 2023:
+                    filtered_movies.append(f"{title} {year}")
+        if filtered_movies:
             has_movies = True
-            movie_response += f"\n**{language}:**\n" + "\n".join(f"• {m}" for m in sorted(movies)) + "\n"
+            movie_response += f"\n**{language}:**\n" + "\n".join(f"• {m}" for m in sorted(set(filtered_movies))) + "\n"
 
     # Add manually added series
     if manual_titles["Series"]:
         has_series = True
         series_response += "\n".join(f"• {s}" for s in manual_titles["Series"]) + "\n"
 
-    # Final response
     response = ""
     if has_movies:
         response += movie_response
@@ -533,15 +553,17 @@ async def latest_movies(client, message):
         await message.reply("📭 No new movies or series found.")
         return
 
+    response += "\n\nTeam @ProSearchFather"
+
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🔄 Fast Refresh", callback_data="refresh")],
         [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
         [InlineKeyboardButton("❌ Close", callback_data="close_message")]
     ])
 
-    await message.reply(response.strip() + "\n\nTeam @ProSearchFather", reply_markup=keyboard)
+    await message.reply(response.strip(), reply_markup=keyboard)
 
-# Manual Title Addition Command
+# Manual Title Addition Command for Admins
 @Client.on_message(filters.command("addtitle"))
 async def add_title(client, message):
     if message.from_user.id not in ADMIN_IDS:
@@ -549,27 +571,36 @@ async def add_title(client, message):
         return
 
     try:
-        _, category, title = message.text.split(None, 2)
+        command_parts = message.text.split(None, 2)
+        if len(command_parts) < 3:
+            await message.reply("⚠️ Invalid format. Use /addtitle <category> <title>")
+            return
 
-        category = category.strip().lower()
-        title = title.strip()
-
-        current_time = time.time()
+        category, title = command_parts[1].strip().lower(), command_parts[2].strip()
 
         if category == "movie":
             language_match = re.search(r"#(\w+)", title)
-            language = language_match.group(1).title() if language_match else "Unknown"
-            clean_title = title.replace(f"#{language}", "").strip()
+            if language_match:
+                language = language_match.group(1).title()
+                clean_title = title.replace(f"#{language}", "").strip()
+            else:
+                language = "Unknown"
+                clean_title = title
 
-            manual_titles["Movies"].setdefault(language, []).append(clean_title)
-            expiry_timestamps["Movies"].setdefault(language, []).append(current_time)
+            if language not in manual_titles["Movies"]:
+                manual_titles["Movies"][language] = []
 
-            await message.reply(f"✅ Movie added successfully: {clean_title} ({language})")
+            if clean_title not in manual_titles["Movies"][language]:
+                manual_titles["Movies"][language].append(clean_title)
+                title_timestamps[clean_title] = datetime.now()  # Track the timestamp
+                await message.reply(f"✅ Movie added successfully: {clean_title} ({language})")
+            else:
+                await message.reply("⚠️ This movie already exists in the database.")
 
         elif category == "series":
             if title not in manual_titles["Series"]:
                 manual_titles["Series"].append(title)
-                expiry_timestamps["Series"].append(current_time)
+                title_timestamps[title] = datetime.now()  # Track the timestamp
                 await message.reply(f"✅ Series added successfully: {title}")
             else:
                 await message.reply("⚠️ This series already exists in the database.")
@@ -579,7 +610,7 @@ async def add_title(client, message):
     except Exception as e:
         await message.reply(f"❌ Error: {str(e)}")
 
-# Remove Title Command
+# Remove Title Command for Admins
 @Client.on_message(filters.command("removetitle"))
 async def remove_title(client, message):
     if message.from_user.id not in ADMIN_IDS:
@@ -587,23 +618,24 @@ async def remove_title(client, message):
         return
 
     try:
-        _, category, title = message.text.split(None, 2)
+        command_parts = message.text.split(None, 2)
+        if len(command_parts) < 3:
+            await message.reply("⚠️ Invalid format. Use /removetitle <category> <title>")
+            return
+
+        category, title = command_parts[1].strip().lower(), command_parts[2].strip()
 
         if category == "movie":
             for language, movies in manual_titles["Movies"].items():
                 if title in movies:
-                    idx = movies.index(title)
-                    movies.pop(idx)
-                    expiry_timestamps["Movies"][language].pop(idx)
+                    manual_titles["Movies"][language].remove(title)
                     await message.reply(f"✅ Movie removed successfully: {title}")
                     return
             await message.reply("⚠️ Movie not found in the database.")
 
         elif category == "series":
             if title in manual_titles["Series"]:
-                idx = manual_titles["Series"].index(title)
-                manual_titles["Series"].pop(idx)
-                expiry_timestamps["Series"].pop(idx)
+                manual_titles["Series"].remove(title)
                 await message.reply(f"✅ Series removed successfully: {title}")
             else:
                 await message.reply("⚠️ Series not found in the database.")
@@ -613,11 +645,11 @@ async def remove_title(client, message):
     except Exception as e:
         await message.reply(f"❌ Error: {str(e)}")
 
-# Fast Refresh Callback
+# Fast Refresh Button Callback
 @Client.on_callback_query(filters.regex("^refresh$"))
-async def refresh_data(client, callback_query):
+async def fast_refresh(client, callback_query):
     await latest_movies(client, callback_query.message)
-    await callback_query.answer("✅ Data refreshed successfully", show_alert=False)
+    await callback_query.answer("✅ Refreshed", show_alert=False)
 
 # Close Button Callback
 @Client.on_callback_query(filters.regex("^close_message$"))
