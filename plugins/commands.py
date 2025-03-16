@@ -599,56 +599,116 @@ async def add_title(client, message):
             else:
                 await message.reply("⚠️ This movie already exists in the database.")
 
-        elif category == "series":
-            if title not in manual_titles["Series"]:
-                manual_titles["Series"].append(title)
-                await message.reply(f"✅ Series added successfully: {title}")
-            else:
-                await message.reply("⚠️ This series already exists in the database.")
-        else:
-            await message.reply("⚠️ Invalid category. Use /addtitle movie or /addtitle series")
+import re
+from datetime import datetime, timedelta
+import pytz
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-    except Exception as e:
-        await message.reply(f"❌ Error: {str(e)}")
+# Admin User ID
+ADMIN_IDS = [6646976956]
 
-# Remove Title Command for Admins
-@Client.on_message(filters.command("removetitle"))
-async def remove_title(client, message):
-    if message.from_user.id not in ADMIN_IDS:
-        await message.reply("❌ You are not authorized to use this command.")
+# Store manually added titles
+manual_titles = {
+    "Movies": {},
+    "Series": []
+}
+
+# Latest Movies Command
+@Client.on_message(filters.command("latest"))
+async def latest_movies(client, message):
+    latest_movies = await get_latest_movies()
+
+    if not isinstance(latest_movies, list):
+        await message.reply("⚠️ Error: Unexpected data format.")
         return
 
-    try:
-        command_parts = message.text.split(None, 2)
-        if len(command_parts) < 3:
-            await message.reply("⚠️ Invalid format. Use /removetitle <category> <title>")
-            return
+    if not latest_movies and not manual_titles["Movies"] and not manual_titles["Series"]:
+        await message.reply("📭 No latest movies or series found.")
+        return
 
-        category, title = command_parts[1].strip().lower(), command_parts[2].strip()
+    combined_movies = {}
+    for language, movies in manual_titles["Movies"].items():
+        if language not in combined_movies:
+            combined_movies[language] = set()
+        combined_movies[language].update(movies)
 
-        if category == "movie":
-            for language, movies in manual_titles["Movies"].items():
-                if title in movies:
-                    manual_titles["Movies"][language].remove(title)
-                    await message.reply(f"✅ Movie removed successfully: {title}")
-                    return
-            await message.reply("⚠️ Movie not found in the database.")
+    for data in latest_movies:
+        if not isinstance(data, dict):
+            continue
 
-        elif category == "series":
-            if title in manual_titles["Series"]:
-                manual_titles["Series"].remove(title)
-                await message.reply(f"✅ Series removed successfully: {title}")
-            else:
-                await message.reply("⚠️ Series not found in the database.")
+        category = data.get("category", "")
+        movies = data.get("movies", [])
+
+        if category == "Series":
+            for series in movies:
+                manual_titles["Series"].append(series)
+
         else:
-            await message.reply("⚠️ Invalid category. Use /removetitle movie or /removetitle series")
+            language = data.get("language", "").title()
+            if language not in combined_movies:
+                combined_movies[language] = set()
+            combined_movies[language].update(movies)
 
-    except Exception as e:
-        await message.reply(f"❌ Error: {str(e)}")
+    # Remove duplicates & apply conditions
+    movie_response = "**🎬 Latest Movies Added to Database**\n"
+    series_response = "**📺 Latest Series Added to Database**\n\n"
 
-# Close Button Callback
+    # Movies
+    for language, movies in combined_movies.items():
+        filtered_movies = [
+            re.sub(r"\s+\d{4}.*", "", m)  # Keep only title & year
+            for m in sorted(movies)
+            if "2023" in m or "2024" in m
+        ]
+        if filtered_movies:
+            movie_response += f"\n**{language}**:\n" + "\n".join(f"• {m}" for m in filtered_movies) + "\n"
+
+    # Series
+    unique_series = {}
+    for series in manual_titles["Series"]:
+        match = re.match(r"(.*?)\s(S\d+E\d+)\s#(\w+)", series)
+        if match:
+            title, episode, lang = match.groups()
+            if title not in unique_series or episode > unique_series[title]["episode"]:
+                unique_series[title] = {"episode": episode, "language": lang}
+
+    if unique_series:
+        series_response += "\n".join(f"• {title} {info['episode']} #{info['language']}" for title, info in unique_series.items()) + "\n"
+
+    # Final Response
+    response = ""
+    if combined_movies:
+        response += movie_response
+    if unique_series:
+        response += "\n" + series_response.strip()
+
+    if not response.strip():
+        await message.reply("📭 No new movies or series found.")
+        return
+
+    # Last Updated Time in IST
+    ist = pytz.timezone('Asia/Kolkata')
+    last_updated = datetime.now(ist).strftime('%I:%M %p')
+
+    response += f"\n\n├ Last Updated: {last_updated}\n\nTeam @ProSearchFather"
+
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 Refresh", callback_data="refresh")],
+        [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
+        [InlineKeyboardButton("❌ Close", callback_data="close_message")]
+    ])
+
+    await message.reply(response.strip(), reply_markup=keyboard)
+
+# Refresh Button
+@Client.on_callback_query(filters.regex("^refresh$"))
+async def refresh_message(client, callback_query):
+    await latest_movies(client, callback_query.message)
+    await callback_query.answer("✅ Refreshed successfully", show_alert=False)
+
+# Close Button
 @Client.on_callback_query(filters.regex("^close_message$"))
 async def close_message(client, callback_query):
     await callback_query.message.delete()
     await callback_query.answer("✅ Message closed", show_alert=False)
-
