@@ -495,21 +495,24 @@ async def latest_movies(client, message):
     has_movies = False
     has_series = False
 
+    # Combine manually added movies with fetched movies
     combined_movies = {}
     for data in latest_movies_data:
         if data.get("category", "") != "Series":
             language = data.get("language", "").title()
-            combined_movies.setdefault(language, []).extend(data.get("movies", []))
+            combined_movies.setdefault(language, []).extend([clean_title(m) for m in data.get("movies", [])])
 
     for language, movies in manual_titles["Movies"].items():
-        combined_movies.setdefault(language, []).extend(movies)
+        combined_movies.setdefault(language, []).extend([clean_title(m) for m in movies])
 
+    # Remove duplicates and format response
     for language, movies in combined_movies.items():
         if movies:
             has_movies = True
             unique_movies = list(set(movies))
-            movie_response += f"\n**{language}:**\n" + "\n".join(f"• {clean_title(m)}" for m in unique_movies) + "\n"
+            movie_response += f"\n**{language}:**\n" + "\n".join(f"• {m}" for m in unique_movies) + "\n"
 
+    # Filter and display only the latest season and episode for series
     latest_episodes = {}
     for data in latest_movies_data:
         if data.get("category", "") == "Series":
@@ -540,6 +543,43 @@ async def latest_movies(client, message):
 
     await message.reply(response.strip(), reply_markup=keyboard)
 
+# /addtitle Command (Merges with existing language categories)
+@Client.on_message(filters.command("addtitle") & filters.user(ADMIN_IDS))
+async def add_title(client, message):
+    try:
+        command_parts = message.text.split(None, 2)
+        if len(command_parts) < 3:
+            await message.reply("⚠️ Invalid format. Use `/addtitle <category> <title>`")
+            return
+
+        category, title = command_parts[1].strip().lower(), clean_title(command_parts[2].strip())
+
+        if category == "movie":
+            language_match = re.search(r"#(\w+)", title)
+            language = language_match.group(1).title() if language_match else "Unknown"
+            clean_title_text = title.replace(f"#{language}", "").strip()
+
+            if language not in manual_titles["Movies"]:
+                manual_titles["Movies"][language] = []
+
+            if clean_title_text not in manual_titles["Movies"][language]:
+                manual_titles["Movies"][language].append(clean_title_text)
+                await message.reply(f"✅ **Movie added successfully:** {clean_title_text} ({language})")
+            else:
+                await message.reply("⚠️ This movie already exists in the database.")
+
+        elif category == "series":
+            if title not in manual_titles["Series"]:
+                manual_titles["Series"].append(title)
+                await message.reply(f"✅ **Series added successfully:** {title}")
+            else:
+                await message.reply("⚠️ This series already exists in the database.")
+        else:
+            await message.reply("⚠️ Invalid category. Use `/addtitle movie` or `/addtitle series`")
+
+    except Exception as e:
+        await message.reply(f"❌ Error: {str(e)}")
+
 # /removetitle Command (Removes both manual and database titles)
 @Client.on_message(filters.command("removetitle") & filters.user(ADMIN_IDS))
 async def remove_title(client, message):
@@ -561,13 +601,13 @@ async def remove_title(client, message):
                     movies.remove(title)
                     found = True
             if found:
-                await message.reply(f"✅ **Removed successfully:** `{title}`")
+                await message.reply(f"✅ **Removed successfully:** {title}")
                 return
 
         elif category == "series":
             if title in manual_titles["Series"]:
                 manual_titles["Series"].remove(title)
-                await message.reply(f"✅ **Removed successfully:** `{title}`")
+                await message.reply(f"✅ **Removed successfully:** {title}")
                 return
 
         # Remove from fetched database entries
@@ -578,7 +618,7 @@ async def remove_title(client, message):
 
                 if title in clean_movies:
                     movies.remove(next(m for m in movies if clean_title(m) == title))
-                    await message.reply(f"✅ **Removed successfully:** `{title}`")
+                    await message.reply(f"✅ **Removed successfully:** {title}")
                     return
 
         await message.reply("❌ Title not found in manual or database records.")
