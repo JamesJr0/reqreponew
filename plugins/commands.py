@@ -494,6 +494,14 @@ async def send_latest_movies(client, message):
             combined_movies[language] = set()
         combined_movies[language].update(movies)
 
+    # Clean and filter movie duplicates
+    def clean_movie_title(title):
+        cleaned_title = re.sub(r"(\d{3,4}p|WEB[ .-]*DL|AAC5[ .-]*\d|Atmos|AV1|VP9|PMI|DDP5[ .-]*\d).*", "", title).strip()
+        cleaned_title = re.sub(r"\s*\(.+\)\s*", "", cleaned_title).strip()  # Remove year in brackets
+        return cleaned_title
+
+    # Process and filter series data
+    latest_episodes = {}
     for data in latest_movies:
         if not isinstance(data, dict):
             continue
@@ -504,30 +512,54 @@ async def send_latest_movies(client, message):
         if category == "Series":
             if movies:
                 has_series = True
-                latest_episodes = {}
                 for series in movies:
-                    series_name = re.sub(r"(S\d{2}E\d{2}).*", r"\1", series)
-                    latest_episodes[series_name] = series
-                series_response += "\n".join(f"• {ep}" for ep in latest_episodes.values()) + "\n"
+                    series_match = re.match(r"(.+?)\s(S\d{2}E\d{2})", series)
+                    if series_match:
+                        series_name = series_match.group(1).strip()
+                        episode_tag = series_match.group(2)
+
+                        # Extract season and episode numbers
+                        season_num = int(re.search(r'S(\d{2})', episode_tag).group(1))
+                        episode_num = int(re.search(r'E(\d{2})', episode_tag).group(1))
+
+                        # Track the latest episode per series
+                        if series_name not in latest_episodes or (
+                            season_num > latest_episodes[series_name]["season"] or
+                            (season_num == latest_episodes[series_name]["season"] and
+                             episode_num > latest_episodes[series_name]["episode"])
+                        ):
+                            latest_episodes[series_name] = {
+                                "full_title": series,
+                                "season": season_num,
+                                "episode": episode_num
+                            }
 
         else:
             language = data.get("language", "").title()
             if language not in combined_movies:
                 combined_movies[language] = set()
+
             for movie in movies:
-                if re.search(r'\b(2023|2024|2025)\b', movie):  # Filter for 2023+
-                    cleaned_title = re.sub(r"\s*\(.+\)\s*", "", movie).strip()  # Remove year in brackets
+                if re.search(r'\b(2023|2024|2025)\b', movie):
+                    cleaned_title = clean_movie_title(movie)
                     combined_movies[language].add(cleaned_title)
 
+    # Add filtered movies
     for language, movies in combined_movies.items():
         if movies:
             has_movies = True
             movie_response += f"\n**{language}**:\n" + "\n".join(f"• {m}" for m in sorted(movies)) + "\n"
 
+    # Add filtered series
+    if latest_episodes:
+        has_series = True
+        series_response += "\n".join(f"• {ep['full_title']}" for ep in latest_episodes.values()) + "\n"
+
     if manual_titles["Series"]:
         has_series = True
         series_response += "\n".join(f"• {s}" for s in manual_titles["Series"]) + "\n"
 
+    # Final response
     response = ""
     if has_movies:
         response += movie_response
@@ -543,7 +575,7 @@ async def send_latest_movies(client, message):
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
         [InlineKeyboardButton("🔄 Refresh", callback_data="refresh_latest")],
-        [InlineKeyboardButton("🔒 Close", callback_data="close_message")]
+        [InlineKeyboardButton("❌ Close", callback_data="close_message")]
     ])
 
     await message.reply(response.strip(), reply_markup=keyboard)
@@ -559,3 +591,4 @@ async def refresh_latest(client, callback_query):
 async def close_message(client, callback_query):
     await callback_query.message.delete()
     await callback_query.answer("✅ Message closed", show_alert=False)
+
