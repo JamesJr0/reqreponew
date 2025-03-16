@@ -451,91 +451,97 @@ async def settings(client, message):
                 ),
             ],
         ]
+       
+   
 import re
-import time
+import datetime
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
-# Admin User IDs
-ADMIN_IDS = [6646976956]
+ADMIN_IDS = [6646976956]  # Your Admin ID
 
-# Store manually added titles with timestamps
+# Store manually added titles
 manual_titles = {
     "Movies": {},
     "Series": []
 }
 
-# Track when entries were added for removal after 24 hours
-title_timestamps = {}
+# Store timestamps for 24-hour expiry
+title_timestamps = []
 
-# Function to remove old entries
-def remove_expired_titles():
-    current_time = time.time()
-
-    # Remove expired movies
-    for language, movies in list(manual_titles["Movies"].items()):
-        manual_titles["Movies"][language] = [
-            movie for movie in movies if current_time - title_timestamps.get(movie, 0) < 86400
-        ]
-        if not manual_titles["Movies"][language]:
-            del manual_titles["Movies"][language]
-
-    # Remove expired series
-    manual_titles["Series"] = [
-        series for series in manual_titles["Series"] if current_time - title_timestamps.get(series, 0) < 86400
-    ]
-
-# Content Generation Function
-async def generate_latest_movies_content():
-    remove_expired_titles()
-
-    latest_movies = await get_latest_movies()
-    combined_movies = {}
-    movie_response = "🎬 **Latest Movies Added to Database**\n"
-    series_response = "📺 **Latest Series Added to Database**\n\n"
-
-    # Combine manually added movies with fetched ones
-    for language, movies in manual_titles["Movies"].items():
-        combined_movies.setdefault(language, set()).update(movies)
-
-    for data in latest_movies:
-        if not isinstance(data, dict):
-            continue
-        category, movies = data.get("category", ""), data.get("movies", [])
-
-        if category == "Series":
-            latest_series = {}
-            for series in movies:
-                series_name = re.sub(r'S\d{2}E\d{2}', '', series).strip()
-                latest_episode = re.findall(r'(S\d{2}E\d{2})', series)
-                if latest_episode:
-                    latest_series[series_name] = max(latest_episode)
-
-            for name, episode in latest_series.items():
-                series_response += f"• {name} {episode}\n"
-
-        else:
-            language = data.get("language", "").title()
-            combined_movies.setdefault(language, set()).update(movies)
-
-    # Build the movie response
-    for language, movies in combined_movies.items():
-        recent_movies = [
-            m for m in sorted(movies)
-            if re.search(r"\b(202[3-9]|20[3-9][0-9])\b", m)
-        ]
-        if recent_movies:
-            movie_response += f"\n**{language}:**\n" + "\n".join(f"• {m}" for m in recent_movies) + "\n"
-
-    # Combine both responses
-    response = movie_response.strip() + "\n\n" + series_response.strip() + "\n\nTeam @ProSearchFather"
-
-    return response
+# Function to clean movie titles and keep only title + year
+def clean_movie_title(title):
+    match = re.search(r"(.+?)\s(\d{4})", title)
+    if match and int(match.group(2)) >= 2023:
+        return f"{match.group(1).strip()} {match.group(2)}"
+    return None
 
 # Latest Movies Command
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
-    content = await generate_latest_movies_content()
+    latest_movies = await get_latest_movies()
+
+    if not isinstance(latest_movies, list):
+        await message.reply("⚠️ Error: Unexpected data format.")
+        return
+
+    movie_response = "🎬 **Latest Movies Added to Database**\n"
+    series_response = "📺 **Latest Series Added to Database**\n\n"
+    has_movies = False
+    has_series = False
+
+    combined_movies = {}  # Merged movie list
+    for language, movies in manual_titles["Movies"].items():
+        combined_movies[language] = set(movies)
+
+    for data in latest_movies:
+        category = data.get("category", "")
+        movies = data.get("movies", [])
+
+        if category == "Series":
+            if movies:
+                has_series = True
+                for series in movies:
+                    # Only keep latest season & episode
+                    series_cleaned = re.sub(r"(S\d{2}E\d{2}).*", r"\1", series)
+                    if series_cleaned not in manual_titles["Series"]:
+                        manual_titles["Series"].append(series_cleaned)
+                continue
+
+        language = data.get("language", "").title()
+        if language not in combined_movies:
+            combined_movies[language] = set()
+
+        # Clean and add movie entries
+        for movie in movies:
+            clean_title = clean_movie_title(movie)
+            if clean_title:
+                combined_movies[language].add(clean_title)
+
+    # Format movie response
+    for language, movies in combined_movies.items():
+        if movies:
+            has_movies = True
+            movie_response += f"\n**{language}:**\n" + "\n".join(f"• {m}" for m in sorted(movies)) + "\n"
+
+    # Format series response
+    if manual_titles["Series"]:
+        has_series = True
+        series_response += "\n".join(f"• {s}" for s in manual_titles["Series"]) + "\n"
+
+    response = ""
+    if has_movies:
+        response += movie_response
+    if has_series:
+        response += "\n" + series_response.strip()
+
+    if not response.strip():
+        await message.reply("📭 No new movies or series found.")
+        return
+
+    # Add timestamp to ensure Refresh button updates correctly
+    timestamp = datetime.datetime.now().strftime("├ Last Updated: %I:%M %p")
+    response += f"\n\n{timestamp}\n\nTeam @ProSearchFather"
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🔄 Refresh", callback_data="refresh")],
@@ -543,15 +549,19 @@ async def latest_movies(client, message):
         [InlineKeyboardButton("❌ Close", callback_data="close_message")]
     ])
 
-    await message.reply(content.strip(), reply_markup=keyboard)
+    await message.reply(response.strip(), reply_markup=keyboard)
 
-# Fast Refresh Button Callback
+# Refresh Button
 @Client.on_callback_query(filters.regex("^refresh$"))
 async def fast_refresh(client, callback_query):
     try:
         updated_content = await generate_latest_movies_content()
+        timestamp = datetime.datetime.now().strftime("├ Last Updated: %I:%M %p")
+        updated_content += f"\n\n{timestamp}"
+
         await callback_query.message.edit(updated_content, reply_markup=callback_query.message.reply_markup)
         await callback_query.answer("✅ Refreshed", show_alert=False)
+
     except Exception as e:
         await callback_query.answer(f"❌ Error: {str(e)}", show_alert=True)
 
@@ -584,7 +594,7 @@ async def add_title(client, message):
 
             if clean_title not in manual_titles["Movies"][language]:
                 manual_titles["Movies"][language].append(clean_title)
-                title_timestamps[clean_title] = time.time()
+                title_timestamps.append(datetime.datetime.now())
                 await message.reply(f"✅ Movie added successfully: {clean_title} ({language})")
             else:
                 await message.reply("⚠️ This movie already exists in the database.")
@@ -592,7 +602,6 @@ async def add_title(client, message):
         elif category == "series":
             if title not in manual_titles["Series"]:
                 manual_titles["Series"].append(title)
-                title_timestamps[title] = time.time()
                 await message.reply(f"✅ Series added successfully: {title}")
             else:
                 await message.reply("⚠️ This series already exists in the database.")
@@ -642,3 +651,4 @@ async def remove_title(client, message):
 async def close_message(client, callback_query):
     await callback_query.message.delete()
     await callback_query.answer("✅ Message closed", show_alert=False)
+
