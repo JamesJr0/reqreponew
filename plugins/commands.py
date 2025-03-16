@@ -465,64 +465,65 @@ manual_titles = {
     "Series": []
 }
 
-# Filter function for movies from 2023 onwards
-def filter_recent_movies(movies):
-    return [m for m in movies if re.search(r"\b(2023|2024|2025)\b", m)]
-
-# Filter function for latest series episodes
-def filter_latest_series(series_list):
-    series_dict = {}
-    for series in series_list:
-        base_title = re.sub(r"S(\d{2})E(\d{2}).*", r"\1\2", series)  # Extract season/episode
-        series_dict[base_title] = series  # Keep the latest entry
-    return list(series_dict.values())
-
 # Latest Movies Command
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
+    await send_latest_movies(client, message)
+
+async def send_latest_movies(client, message):
     latest_movies = await get_latest_movies()
+
+    if not isinstance(latest_movies, list):
+        await message.reply("⚠️ Error: Unexpected data format.")
+        return
 
     if not latest_movies and not manual_titles["Movies"] and not manual_titles["Series"]:
         await message.reply("📭 No latest movies or series found.")
         return
 
-    movie_response = "🎬 Latest Movies Added to Database\n"
-    series_response = "📺 Latest Series Added to Database\n\n"
+    movie_response = "**🎬 Latest Movies Added to Database**\n"
+    series_response = "**📺 Latest Series Added to Database**\n\n"
     has_movies = False
     has_series = False
 
-    # Combine manually added movies with fetched ones
     combined_movies = {}
 
+    # Combine manually added movies with fetched ones
     for language, movies in manual_titles["Movies"].items():
         if language not in combined_movies:
             combined_movies[language] = set()
         combined_movies[language].update(movies)
 
     for data in latest_movies:
+        if not isinstance(data, dict):
+            continue
+
         category = data.get("category", "")
         movies = data.get("movies", [])
 
         if category == "Series":
             if movies:
                 has_series = True
-                filtered_series = filter_latest_series(movies)
-                for series in filtered_series:
-                    series_response += f"• {series}\n"
+                latest_episodes = {}
+                for series in movies:
+                    series_name = re.sub(r"(S\d{2}E\d{2}).*", r"\1", series)
+                    latest_episodes[series_name] = series
+                series_response += "\n".join(f"• {ep}" for ep in latest_episodes.values()) + "\n"
 
         else:
             language = data.get("language", "").title()
             if language not in combined_movies:
                 combined_movies[language] = set()
-            combined_movies[language].update(filter_recent_movies(movies))
+            for movie in movies:
+                if re.search(r'\b(2023|2024|2025)\b', movie):  # Filter for 2023+
+                    cleaned_title = re.sub(r"\s*\(.+\)\s*", "", movie).strip()  # Remove year in brackets
+                    combined_movies[language].add(cleaned_title)
 
-    # Build movie response
     for language, movies in combined_movies.items():
         if movies:
             has_movies = True
-            movie_response += f"\n{language}:\n" + "\n".join(f"• {m}" for m in sorted(movies)) + "\n"
+            movie_response += f"\n**{language}**:\n" + "\n".join(f"• {m}" for m in sorted(movies)) + "\n"
 
-    # Add manually added series
     if manual_titles["Series"]:
         has_series = True
         series_response += "\n".join(f"• {s}" for s in manual_titles["Series"]) + "\n"
@@ -541,10 +542,17 @@ async def latest_movies(client, message):
 
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
+        [InlineKeyboardButton("🔄 Refresh", callback_data="refresh_latest")],
         [InlineKeyboardButton("🔒 Close", callback_data="close_message")]
     ])
 
     await message.reply(response.strip(), reply_markup=keyboard)
+
+# Refresh Callback
+@Client.on_callback_query(filters.regex("^refresh_latest$"))
+async def refresh_latest(client, callback_query):
+    await callback_query.message.delete()
+    await send_latest_movies(client, callback_query.message)
 
 # Close Button Callback
 @Client.on_callback_query(filters.regex("^close_message$"))
