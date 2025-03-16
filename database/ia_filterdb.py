@@ -433,65 +433,74 @@ def get_readable_time(seconds) -> str:
 
 import re
 
+def clean_title(title):
+    """Removes year brackets and extra spaces from titles."""
+    return re.sub(r"\s*\(\d{4}\)\s*", "", title).strip()
+
 async def get_latest_movies():
     languages = ["Malayalam", "Tamil", "Telugu", "Kannada", "Hindi", "English", "Chinese", "Japanese", "Korean"]
     latest_movies = {lang: [] for lang in languages}
-    latest_movies["Multi"] = []  # Multi-language category
-    latest_series = []  # Store series with language tags
+    latest_movies["Multi"] = []  
+    latest_series = {}
 
     # Fetch latest 20 movies from multiple databases
     movies1 = await Media1.collection.find().sort("$natural", -1).limit(20).to_list(None)
     movies2 = await Media2.collection.find().sort("$natural", -1).limit(20).to_list(None)
     movies3 = await Media3.collection.find().sort("$natural", -1).limit(20).to_list(None)
     movies4 = await Media4.collection.find().sort("$natural", -1).limit(20).to_list(None)
+
+    
     all_movies = movies1 + movies2 + movies3 + movies4
 
     for movie in all_movies:
         file_name = movie.get("file_name", "")
-        caption = str(movie.get("caption", ""))  # Ensure caption is always a string
+        caption = str(movie.get("caption", ""))  
 
-        # Extract movie name and check if it's a series
+        # Extract movie name (removing year brackets)
         match = re.search(r"(.+?)(\d{4})", file_name)
-        movie_name = f"{match.group(1).strip()} {match.group(2)}" if match else file_name
+        movie_name = clean_title(match.group(1).strip()) if match else clean_title(file_name)
 
-        # Detect if it's a series (SXXEYY format)
-        series_match = re.search(r"(S\d{2})", file_name, re.IGNORECASE)
+        # Detect Series (e.g., S01E01 format)
+        series_match = re.search(r"(S\d{2}E\d{2})", file_name, re.IGNORECASE)
         if series_match:
-            series_name = re.sub(r"(S\d{2}E\d{2}).*", r"\1", file_name)  # Keep series name + season/episode
+            series_info = series_match.group(1)
+            series_title = clean_title(re.sub(r"(S\d{2}E\d{2}).*", r"\1", file_name))  
             detected_languages = set()
 
             for lang in languages:
-                if re.search(rf"\b{lang}\b", caption, re.IGNORECASE):  # Match full language names
+                if re.search(rf"\b{lang}\b", caption, re.IGNORECASE):  
                     detected_languages.add(lang)
 
-            # If multiple languages are found, mark as Multi
             if len(detected_languages) > 1:
                 detected_languages = {"Multi"}
 
-            # Format series title with language tags
             language_tags = " ".join(f"#{lang}" for lang in detected_languages) if detected_languages else "#Unknown"
-            series_title = f"{series_name} {language_tags}"
+            final_series_title = f"{series_title} {series_info} {language_tags}"
 
-            if series_title not in latest_series:
-                latest_series.append(series_title)
-            continue  # Skip adding to movies
+            # Keep latest season/episode only
+            series_base = series_title.split("S")[0].strip()
+            if series_base not in latest_series or final_series_title > latest_series[series_base]:
+                latest_series[series_base] = final_series_title
 
-        # Identify and store the movie in multiple language categories
+            continue  
+
+        # Add movies to corresponding language categories
         added_to_languages = set()
         for lang in languages:
-            if re.search(rf"\b{lang}\b", caption, re.IGNORECASE):  # Ensure full-word match
-                if movie_name not in latest_movies[lang]:  # Avoid duplicates
+            if re.search(rf"\b{lang}\b", caption, re.IGNORECASE):  
+                if movie_name not in latest_movies[lang]:  
                     latest_movies[lang].append(movie_name)
                     added_to_languages.add(lang)
 
-        # If a movie belongs to multiple languages, add it to "Multi"
+        # Add movies with multiple languages to "Multi"
         if len(added_to_languages) > 1:
             if movie_name not in latest_movies["Multi"]:
                 latest_movies["Multi"].append(movie_name)
 
-    # ✅ Return structured results with series having language tags
+    # ✅ Return structured results
     results = [{"language": lang, "movies": latest_movies[lang][:8]} for lang in latest_movies if latest_movies[lang]]
     if latest_series:
-        results.append({"category": "Series", "movies": latest_series[:10]})  # Add Series separately
+        series_list = list(latest_series.values())
+        results.append({"category": "Series", "movies": series_list[:10]})  
 
     return results
