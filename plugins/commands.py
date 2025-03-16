@@ -467,7 +467,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # Admin User IDs (Replace with actual IDs)
-ADMIN_IDS = [123456789, 987654321]
+ADMIN_IDS = [6646976956, 987654321]
 
 # Store manually added titles
 manual_titles = {
