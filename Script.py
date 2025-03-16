@@ -1,19 +1,36 @@
 class script(object):
-    START_TXT = """<b>𝖧i {}, <b>𝖭𝗂𝖼𝖾 𝗍𝗈 𝗆𝖾𝖾𝗍 𝗒𝗈𝗎 🙌</b>
-<i>𝖨'𝗆 𝗃𝗎𝗌𝗍 𝖺 𝗌𝗂𝗆𝗉𝗅𝖾 𝗉𝗋𝖾 - 𝖿𝗎𝗇𝖼𝗍𝗂𝗈𝗇𝖾𝖽 𝖺𝗎𝗍𝗈𝖿𝗂𝗅𝗍𝖾𝗋 𝖻𝗈𝗍</i>
+    START_TXT = """<b>👋 Hey {}, Welcome to ProSearch Movies!</b>
 
-<i>i𝗍𝗌 𝖾𝖺𝗌𝗒 𝗍𝗈 𝗎𝗌𝖾 𝗆𝖾; 𝗃𝗎𝗌𝗍 𝖺𝖽𝖽 𝗆𝖾 𝗍𝗈 𝗒𝗈𝗎𝗋 𝗀𝗋𝗈𝗎𝗉 𝖺𝗌 𝖺𝖽𝗆𝗂n</i>"""
-    HELP_TXT = """<i>🙋🏻‍♂️   𝖧𝖾𝗅𝗅𝗈𝗈𝗈  {} 🤓
-○  𝗂𝗍'𝗌 𝖭𝗈𝗍𝖾 𝖢𝗈𝗆𝗉𝗅𝗂𝖼𝖺𝗍𝖾𝖽...🤓
-○  𝖲𝖾𝖺𝗋𝖼𝗁 𝗎𝗌𝗂𝗇𝗀 𝗂𝗇𝗅𝗂𝗇𝖾 𝗆𝗈𝖽𝖾...⭐
-𝖳𝗁𝗂𝗌 𝗆𝖾𝗍𝗁𝗈𝖽 𝗐𝗈𝗋𝗄𝗌 𝗈𝗇 𝖺𝗇𝗒 𝖼𝗁𝖺𝗍, 𝖩𝗎𝗌𝗍 𝗍𝗒𝗉𝖾 <b>Bot Username</b> 𝖺𝗇𝖽 𝗍𝗁𝖾𝗇 𝗅𝖾𝖺𝗏𝖾 𝖺 𝗌𝗉𝖺𝖼𝖾 𝖺𝗇𝖽 𝗌𝖾𝖺𝗋𝖼𝗁 𝖺𝗇𝗒 𝗆𝗈𝗏𝗂𝖾 𝗒𝗈𝗎 𝗐𝖺𝗇𝗍..."""
-    ABOUT_TXT = """○ 𝖬𝗒 𝖭𝖺𝗆e : 𝖯𝗋𝗈𝖲𝖾𝖺𝗋𝖼𝗁
-○ 𝖢𝗋𝖾𝖺𝗍𝗈𝗋 : <a href='https://t.me/Luffy_Krishna'>YiFaN</a>
-○ 𝖫𝖺𝗇𝗀𝗎𝖺𝗀𝖾 : 𝖯𝗒𝗍𝗁𝗈𝗇 𝟥 
-○ 𝖫𝗂𝖻𝗋𝖺𝗋𝗒 : 𝖯𝗒𝗋𝗈𝗀𝗋𝖺𝗆 𝖺𝗌𝗒𝗇𝖼𝗂𝗈 𝟢.𝟣𝟩.𝟣 
-○ 𝖲𝖾𝗋𝗏𝖾𝗋 : Contabo
-○ 𝖣𝖺𝗍𝖺𝖻𝖺𝗌𝖾 : <a href='https://www.mongodb.com'>𝖬𝗈𝗇𝗀𝗈𝖣𝖡 𝖥𝗋𝖾𝖾 𝖳𝗂𝖾𝗋</a>
-○ 𝖡𝗎𝗂𝗅𝖽 𝖲𝗍𝖺𝗍𝗎𝗌 : 𝖵9.8 [BeTa]"""
+<i>I'm your friendly auto-filter bot, designed to help you find movies and series effortlessly.</i>
+
+<b>🔹 How to Use Me:</b>  
+- Add me to your group as an admin, and I'll start working automatically.  
+- Or simply send me a movie name directly in PM, and I'll fetch the results for you!  
+- You can also type <code>@ProSearchMoviez_bot</code> followed by a search query in any chat for instant results."""
+
+    HELP_TXT = """<b>🛠️ Help & Usage Guide</b>
+
+<i>🙋🏻‍♂️ Hi {}! Need assistance?</i>
+
+<b>🔍 Searching for Movies & Series:</b>  
+- In Groups: Just type the movie name, and I'll handle the rest.  
+- In PM: Simply send me the movie name directly.  
+- Inline Search: Type <code>@ProSearchMoviez_bot</code> followed by a space and your desired title for quick results.  
+
+<b>💡 Pro Tips:</b>  
+- Be specific with titles for accurate results.  
+- Use common keywords for faster searches."""
+
+    ABOUT_TXT = """<b>ℹ️ About ProSearch Movies</b>
+
+**👤 Bot Name:** ProSearch Movies  
+**👨‍💻 Creator:** <a href='https://t.me/Luffy_Krishna'>YiFaN</a>  
+**📝 Language:** Python 3  
+**📚 Library:** Pyrogram asyncio v2.0  
+**🌐 Server:** Contabo  
+**💾 Database:** <a href='https://www.mongodb.com'>MongoDB Free Tier</a>  
+**🚀 Build Status:** v9.8 [Beta]"""
+
     SOURCE_TXT = """<b>NOTE:</b>
 - ഇപ്പൊ കിട്ടും നോക്കി ഇരുന്നോ .
 <b>DEVS:</b>
