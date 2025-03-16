@@ -455,9 +455,55 @@ async def settings(client, message):
 
 from pyrogram import Client, filters
 
+manual_titles = {
+    "Movies": {},
+    "Series": []
+}
+
+@Client.on_message(filters.command("addtitle"))
+async def add_title(client, message):
+    if message.from_user.id != 6646976956:
+        await message.reply("❌ You are not authorized to use this command.")
+        return
+
+    try:
+        command_parts = message.text.split(None, 2)
+        if len(command_parts) < 3:
+            await message.reply("⚠️ Invalid format. Use `/addtitle <category> <title>`")
+            return
+
+        category, title = command_parts[1].strip().lower(), command_parts[2].strip()
+        title = re.sub(r"\(\d{4}\)", "", title).strip()  # Remove year brackets
+
+        if category == "movie":
+            language_match = re.search(r"#(\w+)", title)
+            language = language_match.group(1).title() if language_match else "Unknown"
+            clean_title = title.replace(f"#{language}", "").strip()
+
+            if language not in manual_titles["Movies"]:
+                manual_titles["Movies"][language] = []
+
+            if clean_title not in manual_titles["Movies"][language]:
+                manual_titles["Movies"][language].append(clean_title)
+                await message.reply(f"✅ **Movie added successfully:** {clean_title} ({language})")
+            else:
+                await message.reply("⚠️ This movie already exists in the database.")
+
+        elif category == "series":
+            if title not in manual_titles["Series"]:
+                manual_titles["Series"].append(title)
+                await message.reply(f"✅ **Series added successfully:** {title}")
+            else:
+                await message.reply("⚠️ This series already exists in the database.")
+        else:
+            await message.reply("⚠️ Invalid category. Use `/addtitle movie` or `/addtitle series`")
+
+    except Exception as e:
+        await message.reply(f"❌ Error: {str(e)}")
+
 @Client.on_message(filters.command("removetitle"))
 async def remove_title(client, message):
-    if message.from_user.id not in [6646976956]:  # Admin Check
+    if message.from_user.id != 6646976956:
         await message.reply("❌ You are not authorized to use this command.")
         return
 
@@ -473,7 +519,6 @@ async def remove_title(client, message):
         if category == "movie":
             found = False
 
-            # Check manually added movies
             for lang, movies in manual_titles["Movies"].items():
                 if title in movies:
                     manual_titles["Movies"][lang].remove(title)
@@ -481,20 +526,18 @@ async def remove_title(client, message):
                     found = True
                     break
 
-            # Check fetched database movies
+            # Remove from fetched data
             latest_movies = await get_latest_movies()
             for data in latest_movies:
-                if data.get("language", "").title() in manual_titles["Movies"]:
-                    if title in data["movies"]:
-                        data["movies"].remove(title)
-                        await message.reply(f"✅ **Fetched movie removed:** {title}")
-                        found = True
-                        break
+                if data.get("language", "").title() == lang and title in data["movies"]:
+                    data["movies"].remove(title)
+                    await message.reply(f"✅ **Fetched movie removed:** {title}")
+                    found = True
+                    break
 
             if not found:
                 await message.reply("❌ Title not found in manual or database records.")
 
-        # Remove Series
         elif category == "series":
             if title in manual_titles["Series"]:
                 manual_titles["Series"].remove(title)
