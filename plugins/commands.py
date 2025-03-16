@@ -452,7 +452,7 @@ async def settings(client, message):
             ],
         ]
 
-        @Client.on_message(filters.command("removetitle"))
+  @Client.on_message(filters.command("removetitle"))
 async def remove_title(client, message):
     if message.from_user.id not in [6646976956]:  # Admin Check
         await message.reply("❌ You are not authorized to use this command.")
