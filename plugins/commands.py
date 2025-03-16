@@ -467,7 +467,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 # Admin User IDs (Replace with actual IDs)
-ADMIN_IDS = [6646976956, 987654321]
+ADMIN_IDS = [123456789, 987654321]
 
 # Store manually added titles
 manual_titles = {
@@ -495,10 +495,12 @@ async def latest_movies(client, message):
     has_series = False
 
     # Combine manually added movies with fetched ones
+    combined_movies = {}  # Dictionary to merge movie entries by language
+
     for language, movies in manual_titles["Movies"].items():
-        if movies:
-            has_movies = True
-            movie_response += f"\n**{language}:**\n" + "\n".join(f"• `{m}`" for m in movies) + "\n"
+        if language not in combined_movies:
+            combined_movies[language] = set()  # Use set to avoid duplicates
+        combined_movies[language].update(movies)
 
     for data in latest_movies:
         if not isinstance(data, dict):
@@ -516,9 +518,15 @@ async def latest_movies(client, message):
 
         else:
             language = data.get("language", "").title()
-            if movies:
-                has_movies = True
-                movie_response += f"\n**{language}:**\n" + "\n".join(f"• `{m}`" for m in movies) + "\n"
+            if language not in combined_movies:
+                combined_movies[language] = set()
+            combined_movies[language].update(movies)
+
+    # Build the movie response
+    for language, movies in combined_movies.items():
+        if movies:
+            has_movies = True
+            movie_response += f"\n**{language}:**\n" + "\n".join(f"• `{m}`" for m in sorted(movies)) + "\n"
 
     # Add manually added series
     if manual_titles["Series"]:
@@ -585,6 +593,41 @@ async def add_title(client, message):
                 await message.reply("⚠️ This series already exists in the database.")
         else:
             await message.reply("⚠️ Invalid category. Use `/addtitle movie` or `/addtitle series`")
+
+    except Exception as e:
+        await message.reply(f"❌ Error: {str(e)}")
+
+# Remove Title Command for Admins
+@Client.on_message(filters.command("removetitle"))
+async def remove_title(client, message):
+    if message.from_user.id not in ADMIN_IDS:
+        await message.reply("❌ You are not authorized to use this command.")
+        return
+
+    try:
+        command_parts = message.text.split(None, 2)
+        if len(command_parts) < 3:
+            await message.reply("⚠️ Invalid format. Use `/removetitle <category> <title>`")
+            return
+
+        category, title = command_parts[1].strip().lower(), command_parts[2].strip()
+
+        if category == "movie":
+            for language, movies in manual_titles["Movies"].items():
+                if title in movies:
+                    manual_titles["Movies"][language].remove(title)
+                    await message.reply(f"✅ **Movie removed successfully:** `{title}`")
+                    return
+            await message.reply("⚠️ **Movie not found in the database.**")
+
+        elif category == "series":
+            if title in manual_titles["Series"]:
+                manual_titles["Series"].remove(title)
+                await message.reply(f"✅ **Series removed successfully:** `{title}`")
+            else:
+                await message.reply("⚠️ **Series not found in the database.**")
+        else:
+            await message.reply("⚠️ Invalid category. Use `/removetitle movie` or `/removetitle series`")
 
     except Exception as e:
         await message.reply(f"❌ Error: {str(e)}")
