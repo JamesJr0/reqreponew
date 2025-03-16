@@ -576,6 +576,13 @@ async def latest_movies(client, message):
 
     await message.reply(response, reply_markup=keyboard)
 
+@Client.on_callback_query(filters.regex("^close_message$"))
+async def close_message(client, callback_query):
+    await callback_query.message.delete()  # Deletes the message
+    await callback_query.answer("Message closed", show_alert=False)  # Optional acknowledgment
+
+
+
 
 
 
