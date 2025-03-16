@@ -462,59 +462,8 @@ async def settings(client, message):
             reply_to_message_id=message.id
         )
 
-@Client.on_message(filters.command("latest"))
-async def latest_movies(client, message):
-    latest_movies = await get_latest_movies()
-
-    if not isinstance(latest_movies, list):
-        print(f"Unexpected data type: {type(latest_movies)}, Value: {repr(latest_movies)}")  # Debugging
-        await message.reply("Error: Unexpected data format.")
-        return
-
-    if not latest_movies:
-        await message.reply("No latest movies found.")
-        return
-
-    movie_response = "🎬 **Latest Movies Added to Database**\n"
-    series_response = "📺 **Latest Series Added to Database**\n"
-
-    has_movies = False
-    has_series = False
-
-    for data in latest_movies:
-        if not isinstance(data, dict):
-            print(f"Unexpected data format in latest_movies: {repr(data)}")  # Debugging
-            continue
-
-        language = data.get("language", "").title()
-        movies = []
-        series = []
-
-        for movie in data.get("movies", []):
-            if re.search(r"S\d{2}", movie, re.IGNORECASE):
-                series.append(movie)
-                has_series = True
-            else:
-                movies.append(movie)
-                has_movies = True
-
-        # Append Movies
-        if movies:
-            movie_response += f"\n**{language}:**\n"
-            movie_response += "\n".join(f"• {m}" for m in movies) + "\n"
-
-        # Append Series
-        if series:
-            series_response += f"\n**{language}:**\n"
-            series_response += "\n".join(f"• {s}" for s in series) + "\n"
-
-    response = ""
-    if has_movies:
-        response += movie_response
-    if has_series:
-        response += "\n" + series_response
-
-    await message.reply(response)
+import re
+from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 @Client.on_message(filters.command("latest"))
@@ -523,16 +472,15 @@ async def latest_movies(client, message):
 
     if not isinstance(latest_movies, list):
         print(f"Unexpected data type: {type(latest_movies)}, Value: {repr(latest_movies)}")  # Debugging
-        await message.reply("Error: Unexpected data format.")
+        await message.reply("⚠️ Error: Unexpected data format.")
         return
 
     if not latest_movies:
-        await message.reply("No latest movies found.")
+        await message.reply("📭 No latest movies or series found.")
         return
 
     movie_response = "🎬 **Latest Movies Added to Database**\n"
-    series_response = "📺 **Latest Series Added to Database**\n"
-
+    series_response = "📺 **Latest Series Added to Database**\n\n"  # Added a new line for spacing
     has_movies = False
     has_series = False
 
@@ -541,52 +489,47 @@ async def latest_movies(client, message):
             print(f"Unexpected data format in latest_movies: {repr(data)}")  # Debugging
             continue
 
-        language = data.get("language", "").title()
-        movies = []
-        series = []
+        category = data.get("category", "")
+        movies = data.get("movies", [])
 
-        for movie in data.get("movies", []):
-            if re.search(r"S\d{2}", movie, re.IGNORECASE):
-                series.append(movie)
+        if category == "Series":  
+            if movies:
                 has_series = True
-            else:
-                movies.append(movie)
+                for series in movies:
+                    if isinstance(series, dict):  # Ensure it's a dictionary
+                        series_title = f"{series.get('title', 'Unknown')}"  # **No Monospace**
+                        language_tag = f" #{series.get('language', 'Unknown')}"  # Language tag stays regular
+                        series_response += f"• {series_title} {language_tag}\n"
+                    else:  # If it's just a string, add normally
+                        series_response += f"• {series}\n"
+        else:  
+            language = data.get("language", "").title()
+            if movies:
                 has_movies = True
-
-        # Append Movies
-        if movies:
-            movie_response += f"\n**{language}:**\n"
-            movie_response += "\n".join(f"• {m}" for m in movies) + "\n"
-
-        # Append Series
-        if series:
-            series_response += f"\n**{language}:**\n"
-            series_response += "\n".join(f"• {s}" for s in series) + "\n"
+                movie_response += f"\n**{language}:**\n" + "\n".join(f"• {m}" for m in movies) + "\n"  # Removed backticks
 
     response = ""
     if has_movies:
         response += movie_response
     if has_series:
-        response += "\n" + series_response
+        response += "\n" + series_response.strip()  # EnsClosely o extra spaces at the end
 
-    # ✅ Inline "Close" Button
-    keyboard = InlineKeyboardMarkup(
-        [[InlineKeyboardButton("❌ Close", callback_data="close_message")]]
-    )
+    if not response.strip():
+        await message.reply("📭 No new movies or series found.")
+        return
 
-    await message.reply(response, reply_markup=keyboard)
+    # ✅ Add "Team @ProSearchFather" at the end
+    response += "\n\n**Team @ProSearchFather**"
+
+    # ✅ Inline Buttons: "Latest Updates Channel" + "Close"
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
+        [InlineKeyboardButton("🔒 Close", callback_data="close_message")]
+    ])
+
+    await message.reply(response.strip(), reply_markup=keyboard)
 
 @Client.on_callback_query(filters.regex("^close_message$"))
 async def close_message(client, callback_query):
     await callback_query.message.delete()  # Deletes the message
-    await callback_query.answer("Message closed", show_alert=False)  # Optional acknowledgment
-
-
-
-
-
-
-
-
-
-
+    await callback_query.answer("✅ Message closed", show_alert=False)  # Optional acknowledgment
