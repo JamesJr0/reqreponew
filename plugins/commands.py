@@ -466,6 +466,16 @@ import re
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
+# Admin User IDs (Replace with actual IDs)
+ADMIN_IDS = [6646976956, 987654321]
+
+# Store manually added titles
+manual_titles = {
+    "Movies": {},
+    "Series": []
+}
+
+# Latest Movies Command
 @Client.on_message(filters.command("latest"))
 async def latest_movies(client, message):
     latest_movies = await get_latest_movies()
@@ -475,61 +485,112 @@ async def latest_movies(client, message):
         await message.reply("⚠️ Error: Unexpected data format.")
         return
 
-    if not latest_movies:
+    if not latest_movies and not manual_titles["Movies"] and not manual_titles["Series"]:
         await message.reply("📭 No latest movies or series found.")
         return
 
     movie_response = "🎬 **Latest Movies Added to Database**\n"
-    series_response = "📺 **Latest Series Added to Database**\n\n"  # Added a new line for spacing
+    series_response = "📺 **Latest Series Added to Database**\n\n"
     has_movies = False
     has_series = False
 
+    # Combine manually added movies with fetched ones
+    for language, movies in manual_titles["Movies"].items():
+        if movies:
+            has_movies = True
+            movie_response += f"\n**{language}:**\n" + "\n".join(f"• `{m}`" for m in movies) + "\n"
+
     for data in latest_movies:
         if not isinstance(data, dict):
-            print(f"Unexpected data format in latest_movies: {repr(data)}")  # Debugging
+            print(f"Unexpected data format in latest_movies: {repr(data)}")
             continue
 
         category = data.get("category", "")
         movies = data.get("movies", [])
 
-        if category == "Series":  
+        if category == "Series":
             if movies:
                 has_series = True
                 for series in movies:
-                    if isinstance(series, dict):  # Ensure it's a dictionary
-                        series_title = f"{series.get('title', 'Unknown')}"  # **No Monospace**
-                        language_tag = f" #{series.get('language', 'Unknown')}"  # Language tag stays regular
-                        series_response += f"• {series_title} {language_tag}\n"
-                    else:  # If it's just a string, add normally
-                        series_response += f"• {series}\n"
-        else:  
+                    series_response += f"• {series}\n"
+
+        else:
             language = data.get("language", "").title()
             if movies:
                 has_movies = True
-                movie_response += f"\n**{language}:**\n" + "\n".join(f"• {m}" for m in movies) + "\n"  # Removed backticks
+                movie_response += f"\n**{language}:**\n" + "\n".join(f"• `{m}`" for m in movies) + "\n"
+
+    # Add manually added series
+    if manual_titles["Series"]:
+        has_series = True
+        series_response += "\n".join(f"• {s}" for s in manual_titles["Series"]) + "\n"
 
     response = ""
     if has_movies:
         response += movie_response
     if has_series:
-        response += "\n" + series_response.strip()  # EnsClosely o extra spaces at the end
+        response += "\n" + series_response.strip()
 
     if not response.strip():
         await message.reply("📭 No new movies or series found.")
         return
 
-    # ✅ Add "Team @ProSearchFather" at the end
     response += "\n\n**Team @ProSearchFather**"
 
-    # ✅ Inline Buttons: "Latest Updates Channel" + "Close"
     keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
-        [InlineKeyboardButton("🔒 Close", callback_data="close_message")]
+        [InlineKeyboardButton("❌ Close", callback_data="close_message")]
     ])
 
     await message.reply(response.strip(), reply_markup=keyboard)
 
+# Manual Title Addition Command for Admins
+@Client.on_message(filters.command("addtitle"))
+async def add_title(client, message):
+    if message.from_user.id not in ADMIN_IDS:
+        await message.reply("❌ You are not authorized to use this command.")
+        return
+
+    try:
+        command_parts = message.text.split(None, 2)
+        if len(command_parts) < 3:
+            await message.reply("⚠️ Invalid format. Use `/addtitle <category> <title>`")
+            return
+
+        category, title = command_parts[1].strip().lower(), command_parts[2].strip()
+
+        if category == "movie":
+            language_match = re.search(r"#(\w+)", title)
+            if language_match:
+                language = language_match.group(1).title()
+                clean_title = title.replace(f"#{language}", "").strip()
+            else:
+                language = "Unknown"
+                clean_title = title
+
+            if language not in manual_titles["Movies"]:
+                manual_titles["Movies"][language] = []
+
+            if clean_title not in manual_titles["Movies"][language]:
+                manual_titles["Movies"][language].append(clean_title)
+                await message.reply(f"✅ **Movie added successfully:** `{clean_title}` ({language})")
+            else:
+                await message.reply("⚠️ This movie already exists in the database.")
+
+        elif category == "series":
+            if title not in manual_titles["Series"]:
+                manual_titles["Series"].append(title)
+                await message.reply(f"✅ **Series added successfully:** `{title}`")
+            else:
+                await message.reply("⚠️ This series already exists in the database.")
+        else:
+            await message.reply("⚠️ Invalid category. Use `/addtitle movie` or `/addtitle series`")
+
+    except Exception as e:
+        await message.reply(f"❌ Error: {str(e)}")
+
+# Close Button Callback
 @Client.on_callback_query(filters.regex("^close_message$"))
 async def close_message(client, callback_query):
-    await callback_query.message.delete()  # Deletes the message
-    await callback_query.answer("✅ Message closed", show_alert=False)  # Optional acknowledgment
+    await callback_query.message.delete()
+    await callback_query.answer("✅ Message closed", show_alert=False)
