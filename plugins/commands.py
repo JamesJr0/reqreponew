@@ -556,7 +556,7 @@ async def latest_movies(client, message):
     response += "\n\nTeam @ProSearchFather"
 
     keyboard = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔄 Fast Refresh", callback_data="refresh")],
+        [InlineKeyboardButton("🔄 Refresh", callback_data="refresh")],
         [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
         [InlineKeyboardButton("❌ Close", callback_data="close_message")]
     ])
@@ -648,8 +648,14 @@ async def remove_title(client, message):
 # Fast Refresh Button Callback
 @Client.on_callback_query(filters.regex("^refresh$"))
 async def fast_refresh(client, callback_query):
-    await latest_movies(client, callback_query.message)
-    await callback_query.answer("✅ Refreshed", show_alert=False)
+    try:
+        # Fetch latest movies again
+        await callback_query.message.edit("🔄 Refreshing... Please wait.")
+        await latest_movies(client, callback_query.message)
+        await callback_query.answer("✅ Refreshed", show_alert=False)
+    except Exception as e:
+        await callback_query.answer(f"❌ Error: {str(e)}", show_alert=True)
+
 
 # Close Button Callback
 @Client.on_callback_query(filters.regex("^close_message$"))
