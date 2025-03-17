@@ -452,8 +452,7 @@ async def settings(client, message):
             ],
         ]
       
-   
-import re
+   import re
 from datetime import datetime, timedelta
 import pytz
 from pyrogram import Client, filters
@@ -562,12 +561,19 @@ async def latest_movies(client, message):
 # Refresh Button
 @Client.on_callback_query(filters.regex("^refresh$"))
 async def refresh_message(client, callback_query):
-    await latest_movies(client, callback_query.message)
-    await callback_query.answer("✅ Refreshed successfully", show_alert=False)
+    try:
+        # Show temporary "Refreshing" message
+        await callback_query.edit_message_text("🔄 Refreshing... Please wait.")
+
+        await latest_movies(client, callback_query.message)
+        await callback_query.answer("✅ Refreshed successfully", show_alert=False)
+    except Exception as e:
+        await callback_query.answer("❌ Failed to refresh. Please try again.", show_alert=True)
 
 # Close Button
 @Client.on_callback_query(filters.regex("^close_message$"))
 async def close_message(client, callback_query):
     await callback_query.message.delete()
     await callback_query.answer("✅ Message closed", show_alert=False)
+
 
