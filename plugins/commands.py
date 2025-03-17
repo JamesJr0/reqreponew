@@ -453,129 +453,100 @@ async def settings(client, message):
         ]
       
   
-
-import re
-from datetime import datetime, timedelta
-import pytz
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from datetime import datetime, timedelta
+import pytz
 
-# Admin User ID
-ADMIN_IDS = [6646976956]
-
-# Store manually added titles
-manual_titles = {
-    "Movies": {},
-    "Series": []
+# Sample Data (Replace with your database logic)
+latest_movies = {
+    "Hindi": [
+        "The Electric State 2025",
+        "Another Movie 2024"
+    ],
+    "Tamil": [
+        "The Electric State 2025"
+    ]
 }
 
-# Latest Movies Command
-@Client.on_message(filters.command("latest"))
-async def latest_movies(client, message):
-    try:
-        latest_movies = await get_latest_movies()
+latest_series = [
+    {"title": "Khadaan", "season": "S01", "episode": "E05", "language": "#English"},
+    {"title": "Solo Leveling", "season": "S02", "episode": "E11", "language": "#Japanese"},
+    {"title": "Nine Bodies in a Mexican Morgue", "season": "S01", "episode": "E03", "language": "#English"}
+]
 
-        if not isinstance(latest_movies, list):
-            await message.reply("⚠️ Error: Unexpected data format.")
-            return
+# Function to format movie entries
+def format_movies(movies):
+    movie_text = ""
+    for lang, titles in movies.items():
+        filtered_movies = [title for title in titles if "2023" in title or "2024" in title or "2025" in title]
+        if filtered_movies:
+            movie_text += f"\n**{lang}**:\n" + "\n".join([f"• {title}" for title in filtered_movies]) + "\n"
+    return movie_text.strip()
 
-        if not latest_movies and not manual_titles["Movies"] and not manual_titles["Series"]:
-            await message.reply("📭 No latest movies or series found.")
-            return
+# Function to format series entries (latest season & episode only)
+def format_series(series_list):
+    series_dict = {}
+    for entry in series_list:
+        series_dict[entry['title']] = entry
+    series_text = "\n".join([f"• {s['title']} {s['season']}{s['episode']} {s['language']}" for s in series_dict.values()])
+    return series_text
 
-        combined_movies = {}
-        for language, movies in manual_titles["Movies"].items():
-            if language not in combined_movies:
-                combined_movies[language] = set()
-            combined_movies[language].update(movies)
+# Function to generate content
+async def generate_latest_content():
+    movies_content = format_movies(latest_movies)
+    series_content = format_series(latest_series)
 
-        for data in latest_movies:
-            if not isinstance(data, dict):
-                continue
+    # IST Timestamp for 'Last Updated'
+    ist = pytz.timezone('Asia/Kolkata')
+    last_updated = datetime.now(ist).strftime('%I:%M %p')
 
-            category = data.get("category", "")
-            movies = data.get("movies", [])
+    content = (
+        f"🎬 **Latest Movies Added to Database**\n{movies_content}\n\n"
+        f"📺 **Latest Series Added to Database**\n{series_content}\n\n"
+        f"└ Last Updated: {last_updated}\n\n"
+        "Team @ProSearchFather"
+    )
+    return content
 
-            if category == "Series":
-                for series in movies:
-                    manual_titles["Series"].append(series)
+# Refresh Button Logic
+@Client.on_callback_query(filters.regex("^refresh$"))
+async def refresh_callback(client, callback_query):
+    message = callback_query.message
 
-            else:
-                language = data.get("language", "").title()
-                if language not in combined_movies:
-                    combined_movies[language] = set()
-                combined_movies[language].update(movies)
+    # Step 1: Display 'Refreshing...' message
+    await message.edit_text("🔄 Refreshing... Please wait.")
 
-        # Remove duplicates & apply conditions
-        movie_response = "**🎬 Latest Movies Added to Database**\n"
-        series_response = "**📺 Latest Series Added to Database**\n\n"
+    # Step 2: Regenerate content
+    refreshed_content = await generate_latest_content()
 
-        # Movies
-        for language, movies in combined_movies.items():
-            filtered_movies = [
-                re.sub(r"\s+\d{4}.*", "", m)  
-                for m in sorted(movies)
-                if "2023" in m or "2024" in m
-            ]
-            if filtered_movies:
-                movie_response += f"\n**{language}**:\n" + "\n".join(f"• {m}" for m in filtered_movies) + "\n"
-
-        # Series
-        unique_series = {}
-        for series in manual_titles["Series"]:
-            match = re.match(r"(.*?)\s(S\d+E\d+)\s#(\w+)", series)
-            if match:
-                title, episode, lang = match.groups()
-                if title not in unique_series or episode > unique_series[title]["episode"]:
-                    unique_series[title] = {"episode": episode, "language": lang}
-
-        if unique_series:
-            series_response += "\n".join(f"• {title} {info['episode']} #{info['language']}" for title, info in unique_series.items()) + "\n"
-
-        # Final Response
-        response = ""
-        if combined_movies:
-            response += movie_response
-        if unique_series:
-            response += "\n" + series_response.strip()
-
-        if not response.strip():
-            await message.reply("📭 No new movies or series found.")
-            return
-
-        # Last Updated Time in IST
-        ist = pytz.timezone('Asia/Kolkata')
-        last_updated = datetime.now(ist).strftime('%I:%M %p')
-
-        response += f"\n\n├ Last Updated: {last_updated}\n\nTeam @ProSearchFather"
-
-        keyboard = InlineKeyboardMarkup([
+    # Step 3: Replace with updated content
+    await message.edit_text(
+        refreshed_content,
+        reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("🔄 Refresh", callback_data="refresh")],
             [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
             [InlineKeyboardButton("❌ Close", callback_data="close_message")]
         ])
+    )
 
-        await message.reply(response.strip(), reply_markup=keyboard)
-
-    except Exception as e:
-        await message.reply(f"❌ Error: {e}")
-
-# Refresh Button
-@Client.on_callback_query(filters.regex("^refresh$"))
-async def refresh_message(client, callback_query):
-    try:
-        # Show temporary "Refreshing" message
-        await callback_query.edit_message_text("🔄 Refreshing... Please wait.")
-
-        await latest_movies(client, callback_query.message)
-        await callback_query.answer("✅ Refreshed successfully", show_alert=False)
-    except Exception as e:
-        await callback_query.answer("❌ Failed to refresh. Please try again.", show_alert=True)
-
-# Close Button
+# Close Button Logic
 @Client.on_callback_query(filters.regex("^close_message$"))
-async def close_message(client, callback_query):
+async def close_callback(client, callback_query):
     await callback_query.message.delete()
-    await callback_query.answer("✅ Message closed", show_alert=False)
+
+# Main Command
+@Client.on_message(filters.command("latest") & filters.user(6646976956))  # Admin only
+async def latest_movies(client, message):
+    content = await generate_latest_content()
+    await message.reply_text(
+        content,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔄 Refresh", callback_data="refresh")],
+            [InlineKeyboardButton("📢 Latest Updates Channel", url="https://t.me/+-a7Vk8PDrCtiYTA9")],
+            [InlineKeyboardButton("❌ Close", callback_data="close_message")]
+        ])
+    )
+
 
 
