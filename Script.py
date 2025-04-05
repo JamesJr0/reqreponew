@@ -1,36 +1,19 @@
 class script(object):
-    START_TXT = """<b>👋 Hey {}, Welcome to ProSearch Movies!</b>
+    START_TXT = """<b>𝖧𝖾𝗒 {},\n\n𝖨 𝖺𝗆 𝖠 𝖥𝗂𝗅𝗍𝖾𝗋 𝖡𝗈𝗍 𝖮𝖿𝖿𝗂𝖼𝗂𝖺𝗅𝗅𝗒 𝖬𝖺𝖽𝖾 𝖡𝗒 𝖳𝖾𝖺𝗆 <a href='https://t.me/ProSearchFather'>@𝖯𝗋𝗈𝖲𝖾𝖺𝗋𝖼𝗁𝖥𝖺𝗍𝗁𝖾𝗋.</a>\n\n𝖧𝖾𝗋𝖾 𝖸𝗈𝗎 𝖢𝖺𝗇 𝖱𝖾𝗊𝗎𝖾𝗌𝗍 𝖬𝗈𝗏𝗂𝖾/𝖲𝖾𝗋𝗂𝖾𝗌, 𝖩𝗎𝗌𝗍 𝖲𝖾𝗇𝗍 𝖬𝗈𝗏𝗂𝖾/𝖲𝖾𝗋𝗂𝖾𝗌 𝖭𝖺𝗆𝖾 𝖶𝗂𝗍𝗁 𝖯𝗋𝗈𝗉𝖾𝗋 <a href='https://www.google.com/'>𝖦𝗈𝗈𝗀𝗅𝖾</a> 𝖲𝗉𝖾𝗅𝗅𝗂𝗇𝗀..!!\n\nFᴏʀ Mᴏʀᴇ Dᴇᴛᴀɪʟꜱ Cʟɪᴄᴋ /help</b>
+"""
+    LINKS_TXT = """<b>🔗 𝖢𝗁𝖾𝖼𝗄 𝖮𝗎𝗍 𝖠𝗅𝗅 𝖮𝗎𝗋 𝖫𝗂𝗇𝗄𝗌 𝖥𝗋𝗈𝗆 𝗍𝗁𝖾 𝖡𝗎𝗍𝗍𝗈𝗇𝗌 𝖦𝗂𝗏𝖾𝗇 𝖡𝖾𝗅𝗈𝗐.\n\n© 𝖳𝖾𝖺𝗆 <a href='https://t.me/ProSearchFather'>@𝖯𝗋𝗈𝖲𝖾𝖺𝗋𝖼𝗁𝖥𝖺𝗍𝗁𝖾𝗋</a></b>"""
+    HELP_TXT = """<b>Bro, Check Movie Name In #Google and Try ! Then No Results Add Movie Year and Try , Again No Results ? It's Not Available In Our Database Or Movie Not Released !\n\nബ്രോ, മൂവിയുടെ പേര് മാത്രം #Google നോക്കിയിട്ട് അടിച്ചു നോക്കുക..!!\n\nഎന്നിട്ടും കിട്ടിയില്ലെങ്കിൽ പേരിന്റെ കൂടെ മൂവി ഇറങ്ങിയ വർഷം കൂടി അടിച്ചു നോക്ക് 😁\n\nഎനിയും കിട്ടിയില്ലെങ്കിൽ ആ മൂവി ഞങ്ങളുടെ ഡാറ്റാബേസിൽ ഇല്ല, അല്ലെങ്കിൽ ആ മൂവി ഇറങ്ങിയിട്ടില്ല എന്ന് മനസ്സിലാക്കുക! 🤗⚠️\n\n📌 Any Help For Movie Searching Contact Admin.</b>"""
+    ABOUT_TXT = """<b>👋 Hello,</b>
+<b>👤 My Name:</b> ProSearch Moviez
+<b>🧑‍💻 Creator:</b> <a href='https://t.me/Luffy_Krishna'>YiFaN ♥️</a>
+<b>📱 Language:</b> Python 3
+<b>📚 Library:</b> Pyrogram Asyncio 0.18.1
+<b>🔐 Database:</b> <a href='https://www.mongodb.com'>MongoDB Free Tier</a>
+<b>⚡ Server:</b> Contabo
+<b>🛠 Status:</b> V9.8 [Beta]</b>"""
 
-<i>I'm your friendly auto-filter bot, designed to help you find movies and series effortlessly.</i>
-
-<b>🔹 How to Use Me:</b>  
-- Add me to your group as an admin, and I'll start working automatically.  
-- Or simply send me a movie name directly in PM, and I'll fetch the results for you!  
-- You can also type <code>@ProSearchMoviez_bot</code> followed by a search query in any chat for instant results."""
-
-    HELP_TXT = """<b>🛠️ Help & Usage Guide</b>
-
-<i>🙋🏻‍♂️ Hi {}! Need assistance?</i>
-
-<b>🔍 Searching for Movies & Series:</b>  
-- In Groups: Just type the movie name, and I'll handle the rest.  
-- In PM: Simply send me the movie name directly.  
-- Inline Search: Type <code>@ProSearchMoviez_bot</code> followed by a space and your desired title for quick results.  
-
-<b>💡 Pro Tips:</b>  
-- Be specific with titles for accurate results.  
-- Use common keywords for faster searches."""
-
-    ABOUT_TXT = """<b>ℹ️ About ProSearch Movies</b>
-
-**👤 Bot Name:** ProSearch Movies  
-**👨‍💻 Creator:** <a href='https://t.me/Luffy_Krishna'>YiFaN</a>  
-**📝 Language:** Python 3  
-**📚 Library:** Pyrogram asyncio v2.0  
-**🌐 Server:** Contabo  
-**💾 Database:** <a href='https://www.mongodb.com'>MongoDB Free Tier</a>  
-**🚀 Build Status:** v9.8 [Beta]"""
-
+    ENGLISHSPELL_TXT = """<b>‼️ FILE NOT FOUND  ‼️\n\n1️⃣ സിനിമയുടെ സ്പെല്ലിങ്ങ് ഗൂഗിളിൽ ഉള്ളത് പോലെ ആണോ നിങ്ങൾ അടിച്ചത് എന്ന് ഉറപ്പ് വരുത്തുക..!!\n\n2️⃣ നിങ്ങൾ ചോദിച്ച സിനിമ OTT റിലീസ് ആയതാണോ എന്ന് ചെക്ക് ചെയ്യുക..!!\n\n3️⃣ സഹായം ആവശ്യമുള്ളവർ <a href='https://t.me/+iqUWSdGIMOw3NGM1'>പ്രോസെർച്ച് സപ്പോർട്ട്</a> ഗ്രൂപ്പുമായി ബന്ധപ്പെടുക അഡ്മിൻസ് സഹായിക്കുന്നതാണ്.\n\n4️⃣ 𝖢𝗈𝗇𝗍𝖺𝖼𝗍 𝖠𝖽𝗆𝗂𝗇𝗌, 𝖲𝗈 𝖳𝗁𝖾𝗒 𝖢𝖺𝗇 𝖠𝖽𝖽 𝖥𝗂𝗅𝖾𝗌 𝖳𝗈 𝖬𝗒 𝖣𝖺𝗍𝖺𝖻𝖺𝗌𝖾 !</b>"""
+    SUZZY_TXT = """<b> ⚠️ You can't Use @ProSearchFatherBot in Groups for Searching Movies/Series!\n\nYou Can Use @ProSearchMoviez_Bot for Searching Files in Groups Easily, @ProSearchFatherBot is Specially Designed For PM Search..\n\n Team @ProSearchFather !</b>"""
     SOURCE_TXT = """<b>NOTE:</b>
 - ഇപ്പൊ കിട്ടും നോക്കി ഇരുന്നോ .
 <b>DEVS:</b>
