@@ -108,4 +108,3 @@ async def refresh_notify(client, query: CallbackQuery):
 async def close_notify(client, query: CallbackQuery):
     await query.message.delete()
     await query.answer("Closed.")
-.
