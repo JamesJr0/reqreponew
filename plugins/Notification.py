@@ -4,52 +4,76 @@ from pyrogram.types import Message
 from pyrogram import Client, filters
 from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 
-ADMIN_ID = 6646976956  # Replace with your Telegram user ID
+from pyrogram import Client, filters
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.enums import ParseMode
 
+# Only your Telegram user ID
+ADMIN_IDS = [6646976956]
 
-@Client.on_message(filters.command("notify") & filters.incoming)
-async def notify_handler(client: Client, message: Message):
-    if message.from_user and message.from_user.id != ADMIN_ID:
-        return await message.reply("❌ Only the bot admin can use this command.")
+# Store manual notification posts
+manual_titles = {
+    "CustomPosts": []
+}
 
-    # Check if there is a message after the command
-    if len(message.command) < 2:
-        return await message.reply("❌ Usage:\n/notify Your custom message")
+# /notify command – only for admin
+@Client.on_message(filters.command("notify") & filters.user(ADMIN_IDS))
+async def notify_handler(client, message):
+    parts = message.text.split(None, 1)
+    if len(parts) < 2:
+        await message.reply("❌ Usage:\n/notify Your custom message")
+        return
 
-    # Get the message content
-    text = message.text.split(None, 1)[1].strip()
+    raw_text = parts[1].strip()
+    manual_titles["CustomPosts"].append(raw_text)
 
-    # Add ▪️ at the start of the first line
-    if "\n" in text:
-        parts = text.split("\n", 1)
-        text = f"▪️ {parts[0]}\n{parts[1]}"
-    else:
-        text = f"▪️ {text}"
+    # Add ▪️ to first line only
+    lines = raw_text.splitlines()
+    if lines:
+        lines[0] = f"▪️ {lines[0]}"
+    formatted_text = "\n".join(lines)
 
-    # Inline keyboard
-    buttons = InlineKeyboardMarkup([
+    keyboard = InlineKeyboardMarkup([
         [InlineKeyboardButton("🤖 BOT UPDATES 🤖", url="https://t.me/+p0RB9_pSWnU2Nzll")],
-        [InlineKeyboardButton("✖️ Close", callback_data="close_msg")]
+        [InlineKeyboardButton("✖️ Close", callback_data="close_message")]
     ])
 
     await message.reply(
-        text,
-        parse_mode="Markdown",
-        disable_web_page_preview=True,
-        reply_markup=buttons,
-        quote=True
+        formatted_text,
+        reply_markup=keyboard,
+        parse_mode=ParseMode.MARKDOWN
     )
 
-    try:
-        await message.delete()
-    except:
-        pass
+# /notification command – for everyone
+@Client.on_message(filters.command("notification"))
+async def show_notifications(client, message):
+    posts = manual_titles["CustomPosts"]
+    if not posts:
+        await message.reply("📭 No notifications available.")
+        return
 
+    final_text = ""
+    for post in posts:
+        lines = post.splitlines()
+        if lines:
+            lines[0] = f"▪️ {lines[0]}"
+        final_text += "\n".join(lines).strip() + "\n\n"
 
-@Client.on_callback_query(filters.regex("close_msg"))
-async def close_button(client: Client, callback_query: CallbackQuery):
+    keyboard = InlineKeyboardMarkup([
+        [InlineKeyboardButton("🤖 BOT UPDATES 🤖", url="https://t.me/+p0RB9_pSWnU2Nzll")],
+        [InlineKeyboardButton("✖️ Close", callback_data="close_message")]
+    ])
+
+    await message.reply(
+        final_text.strip(),
+        reply_markup=keyboard,
+        parse_mode=ParseMode.MARKDOWN
+    )
+
+# Close button callback
+@Client.on_callback_query(filters.regex("close_message"))
+async def close_message(client, callback_query):
     try:
         await callback_query.message.delete()
-        await callback_query.answer()
     except:
-        await callback_query.answer("❌ Failed to close message.", show_alert=True)
+        await callback_query.answer("❌ Can't delete this message.", show_alert=True)
