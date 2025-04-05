@@ -168,7 +168,12 @@ async def advantage_spoll_choker(bot, query):
             k = (movie, files, offset, total_results)
             await auto_filter(bot, query, k)
         else:
-            k = await query.message.edit("<b><i>Movie Not available Reason\n\n1) O.T.T Or DVD Not Released\n\n2) Type Name With Year\n\n3) Movie Is Not Available in the database Report to Admins\n\nReport to Admin By 👇\n@Pro_Searchbot</i></b>")
+            k = await query.message.edit("<b>‼️ FILE NOT FOUND  ‼️\n\n"
+        "1️⃣ Make Sure The Movie Is Spelled Exactly As It Is In Google..!!\n\n"
+        "2️⃣ Check If The Movie You Requested Is Released In OTT.!!\n\n"
+        "3️⃣ If You Need Help Contact The <a href='https://t.me/Pro_Searchbot'>Support Group</a> "
+        "Admins Will Help.\n\n"
+        "4️⃣ 𝖢𝗈𝗇𝗍𝖺𝖼𝗍 𝖠𝖽𝗆𝗂𝗇𝗌, 𝖲𝗈 𝖳𝗁𝖾𝗒 𝖢𝖺𝗇 𝖠𝖽𝖽 𝖥𝗂𝗅𝖾𝗌 𝖳𝗈 𝖬𝗒 𝖣𝖺𝗍𝖺𝖻𝖺𝗌𝖾 !</b>")
             await asyncio.sleep(25)
             await k.delete()
 @Client.on_callback_query()
