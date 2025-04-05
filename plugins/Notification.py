@@ -1,5 +1,9 @@
-from pyrogram import Client, filters
-from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+import time
+import random
+from pyrogram.types import Message
+from pyrogram import Client, filters, enums
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+
 
 CMD = ["/", "."]
 ADMIN_ID = 6646976956  # Your Telegram user ID
