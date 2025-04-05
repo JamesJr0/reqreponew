@@ -4,7 +4,7 @@ from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, 
 # Constants
 CMD = ["/", "."]
 ADMIN_ID = 6646976956  # Your Telegram user ID
-CHANNEL_ID = -1002224909238  # Replace with your channel ID
+CHANNEL_ID = -1002613146572  # Replace with your channel ID
 
 # /notifications command
 @Client.on_message(filters.command("notifications", CMD) & filters.incoming)
